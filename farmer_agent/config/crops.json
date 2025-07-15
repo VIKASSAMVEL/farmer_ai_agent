@@ -1,0 +1,12 @@
+{
+  "Tomato": {
+    "recommended_soil": "Sandy Loam",
+    "climate_smart_tips": ["Use drip irrigation to save water.", "Apply organic mulch for moisture retention."],
+    "care_instructions": ["Check for leaf spots weekly.", "Fertilize with compost every 2 weeks."]
+  },
+  "Rice": {
+    "recommended_soil": "Clay Loam",
+    "climate_smart_tips": ["Practice alternate wetting and drying.", "Use drought-resistant varieties."],
+    "care_instructions": ["Monitor for stem borers.", "Maintain proper water levels."]
+  }
+}
