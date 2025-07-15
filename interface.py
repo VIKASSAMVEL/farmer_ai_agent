@@ -173,7 +173,26 @@ class ChatScreen(BoxLayout):
         self.add_bubble("Please enter your question or keyword for FAQ:", is_user=False)
         self.awaiting_faq = True
     def weather_action(self, instance):
-        self.add_bubble("Weather feature coming soon!", is_user=False)
+        try:
+            from farmer_agent.data.weather import WeatherEstimator
+            estimator = WeatherEstimator()
+            location = estimator.get_current_location()
+            if location:
+                self.add_bubble(f"Detected location: {location}", is_user=False)
+                weekly = estimator.fetch_weekly_forecast(location)
+                if weekly:
+                    import json
+                    self.add_bubble(f"7-Day Weather Forecast for {location}:", is_user=False)
+                    self.add_bubble(json.dumps(weekly, indent=2, ensure_ascii=False), is_user=False)
+                    tips = estimator.get_llm_weather_tips(weekly)
+                    self.add_bubble("LLM Tips for Farmers:", is_user=False)
+                    self.add_bubble(tips, is_user=False)
+                else:
+                    self.add_bubble("Could not fetch weekly forecast. Check API key or location.", is_user=False)
+            else:
+                self.add_bubble("Could not detect location.", is_user=False)
+        except Exception as e:
+            self.add_bubble(f"Weather error: {str(e)}", is_user=False)
     def translate_action(self, instance):
         self.add_bubble("Enter text to translate from English:", is_user=False)
         self.awaiting_translate_text = True

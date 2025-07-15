@@ -9,6 +9,76 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 WEATHER_FILE = os.path.join(DATA_DIR, 'weather_patterns.json')
 
 class WeatherEstimator:
+    def get_llm_weather_tips(self, weekly_forecast, model="llama3:8b", host="http://localhost:11434"):
+        """
+        Use local LLM (Ollama) to provide farming tips based on the weekly weather forecast.
+        Returns a string of advice/tips.
+        """
+        if not weekly_forecast:
+            return "No forecast data available for tips."
+        try:
+            import requests
+            import json
+            prompt = (
+                "You are an agricultural expert. Based on the following 7-day weather forecast, provide practical tips for farmers in India. "
+                "Focus on irrigation, disease prevention, crop protection, and any weather-related risks.\n"
+                f"Forecast: {json.dumps(weekly_forecast, ensure_ascii=False, indent=2)}\n"
+                "Tips:"
+            )
+            url = f"{host}/api/generate"
+            payload = {
+                "model": model,
+                "prompt": prompt,
+                "stream": False
+            }
+            response = requests.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+            llm_response = response.json().get("response", "")
+            return llm_response.strip()
+        except Exception as e:
+            return f"[LLM error: {e}]"
+    def fetch_weekly_forecast(self, location):
+        """
+        Fetch 7-day weather forecast for the given location using OpenWeatherMap One Call API.
+        Returns a list of daily forecasts (date, temperature, humidity, rainfall, wind, advice).
+        """
+        if not self.openweather_api_key or not location:
+            return None
+        # Get lat/lon for location
+        try:
+            geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={location}&limit=1&appid={self.openweather_api_key}"
+            geo_resp = requests.get(geo_url, timeout=5)
+            if geo_resp.status_code == 200 and geo_resp.json():
+                geo = geo_resp.json()[0]
+                lat, lon = geo['lat'], geo['lon']
+            else:
+                return None
+            # Fetch 7-day forecast
+            url = f"https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&exclude=current,minutely,hourly,alerts&units=metric&appid={self.openweather_api_key}"
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                daily = data.get('daily', [])
+                forecast = []
+                for day in daily[:7]:
+                    dt = datetime.fromtimestamp(day['dt']).strftime('%Y-%m-%d')
+                    temp = day['temp']['day']
+                    humidity = day['humidity']
+                    rainfall = day.get('rain', 0)
+                    wind = f"{day.get('wind_speed', 'N/A')} m/s"
+                    weather_desc = day.get('weather', [{}])[0].get('description', '')
+                    forecast.append({
+                        "date": dt,
+                        "temperature": temp,
+                        "humidity": humidity,
+                        "rainfall": rainfall,
+                        "wind": wind,
+                        "advice": weather_desc.capitalize()
+                    })
+                return forecast
+        except Exception as e:
+            print(f"Weekly forecast error: {e}")
+        return None
     def get_current_location(self):
         """
         Get current location (city) using IP geolocation API (ipinfo.io).
@@ -167,9 +237,14 @@ if __name__ == "__main__":
     location = estimator.get_current_location()
     if location:
         print(f"Detected location: {location}")
-        weather = estimator.estimate(location=location, use_online=True)
-        print(f"Weather for {location}:")
-        print(json.dumps(weather, indent=2, ensure_ascii=False))
+        weekly = estimator.fetch_weekly_forecast(location)
+        if weekly:
+            print(f"7-Day Weather Forecast for {location}:")
+            print(json.dumps(weekly, indent=2, ensure_ascii=False))
+            tips = estimator.get_llm_weather_tips(weekly)
+            print("\nLLM Tips for Farmers:")
+            print(tips)
+        else:
+            print("Could not fetch weekly forecast. Check API key or location.")
     else:
-        print("Could not detect location. Showing default weather estimate.")
-        print("Estimated weather for current season:", estimator.estimate())
+        print("Could not detect location.")

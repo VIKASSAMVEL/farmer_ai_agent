@@ -139,30 +139,20 @@ def main():
                 print("No response from LLM.")
         elif choice == "5":
             estimator = WeatherEstimator(openweather_api_key=openweather_api_key)
-            use_online = True
-            prefer_openweather = True
-            season = input("Enter season (summer/monsoon/winter, blank for auto): ").strip() or None
-            location = input("Enter location (optional): ").strip() or None
-            crop = input("Enter crop (optional): ").strip() or None
-            date_str = input("Enter date (YYYY-MM-DD, blank for today): ").strip()
-            from datetime import datetime
-            date = None
-            if date_str:
-                try:
-                    date = datetime.strptime(date_str, "%Y-%m-%d")
-                except Exception:
-                    print("Invalid date format, using today.")
-            weather = estimator.estimate(season=season, location=location, crop=crop, date=date, use_online=use_online, prefer_openweather=prefer_openweather)
-            print(acc.format_text("Weather Estimation:"))
-            print(f"Temperature: {weather.get('temperature', 'N/A')}°C")
-            print(f"Humidity: {weather.get('humidity', 'N/A')}%")
-            print(f"Rainfall: {weather.get('rainfall', 'N/A')} mm")
-            print(f"Wind: {weather.get('wind', 'N/A')}")
-            print(f"Advice: {weather.get('advice', 'N/A')}")
-            warnings = weather.get('warnings', [])
-            if warnings:
-                for w in warnings:
-                    print(f"- {w}")
+            location = estimator.get_current_location()
+            if location:
+                print(acc.format_text(f"Detected location: {location}"))
+                weekly = estimator.fetch_weekly_forecast(location)
+                if weekly:
+                    print(acc.format_text(f"7-Day Weather Forecast for {location}:"))
+                    print(json.dumps(weekly, indent=2, ensure_ascii=False))
+                    tips = estimator.get_llm_weather_tips(weekly)
+                    print(acc.format_text("\nLLM Tips for Farmers:"))
+                    print(tips)
+                else:
+                    print(acc.format_text("Could not fetch weekly forecast. Check API key or location."))
+            else:
+                print(acc.format_text("Could not detect location."))
         elif choice == "6":
             analytics = Analytics()
             print(acc.format_text("User Activity Summary:"))
