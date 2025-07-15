@@ -16,6 +16,7 @@ class STT:
         """
         self.whisper_model = whisper_model
         self._whisper_model = None
+        self._mic_recording_path = None  # Track last mic recording
 
     def transcribe_audio(self, file_path: str, language: str = "auto") -> str:
         """
@@ -39,10 +40,12 @@ class STT:
         except Exception as e:
             return f"[Error] {str(e)}"
 
-    def record_from_mic(self, duration=5, output_path=None):
+    def record_from_mic(self, output_path=None):
         """
-        Records audio from the microphone and saves to output_path (WAV, 16kHz mono). Returns the file path.
+        Starts recording audio from the microphone in a background thread. Keeps recording until stop_recording_from_mic is called.
+        Returns None when started.
         """
+        import threading
         try:
             import pyaudio
         except ImportError:
@@ -53,36 +56,57 @@ class STT:
         RATE = 16000
         p = pyaudio.PyAudio()
         stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
-        print(f"Recording from mic for {duration} seconds...")
-        frames = []
-        for _ in range(0, int(RATE / CHUNK * duration)):
-            data = stream.read(CHUNK, exception_on_overflow=False)
-            frames.append(data)
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+        print("Mic recording started. Press the mic button again to stop.")
+        self._mic_stream = stream
+        self._mic_pyaudio = p
+        self._mic_frames = []
+        self._mic_recording = True
+        def _record():
+            while self._mic_recording:
+                data = self._mic_stream.read(CHUNK, exception_on_overflow=False)
+                self._mic_frames.append(data)
+        self._mic_thread = threading.Thread(target=_record, daemon=True)
+        self._mic_thread.start()
+        return None  # Recording started, no file yet
+
+    # append_mic_frame is no longer needed; recording is handled in a thread
+
+    def stop_recording_from_mic(self, output_path=None):
+        """
+        Stops mic recording and saves the audio to output_path. Returns the file path.
+        """
+        if not hasattr(self, '_mic_stream') or not self._mic_recording:
+            return "[Error] Mic was not recording."
+        self._mic_recording = False
+        self._mic_stream.stop_stream()
+        self._mic_stream.close()
+        self._mic_pyaudio.terminate()
         if not output_path:
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
             output_path = tmp.name
             tmp.close()
         wf = wave.open(output_path, 'wb')
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
+        wf.setnchannels(1)
+        import pyaudio
+        wf.setsampwidth(self._mic_pyaudio.get_sample_size(pyaudio.paInt16))
+        wf.setframerate(16000)
+        wf.writeframes(b''.join(self._mic_frames))
         wf.close()
         return output_path
 
-    def recognize(self, source="file", language: str = "auto", duration=5, file_path: str = "") -> str:
+    def recognize(self, source="file", language: str = "auto", file_path: str = "", toggle=False) -> str:
         """
-        Unified interface: source="mic" or "file". If mic, records then transcribes with Whisper.
+        Unified interface: source="mic" or "file". If mic, starts/stops recording and transcribes with Whisper.
         """
         if source == "mic":
-            audio_path = self.record_from_mic(duration=duration)
-            if isinstance(audio_path, str) and audio_path.endswith('.wav'):
-                return self.transcribe_audio(audio_path, language=language)
+            if not self._mic_recording_path:
+                self.record_from_mic()
+                self._mic_recording_path = "[Mic Recording Started]"
+                return "[Mic Recording Started]"
             else:
-                return audio_path if isinstance(audio_path, str) else "[Error] Mic recording failed."
+                audio_path = self.stop_recording_from_mic()
+                self._mic_recording_path = None
+                return self.transcribe_audio(audio_path, language=language)
         elif source == "file" and file_path:
             return self.transcribe_audio(file_path, language=language)
         else:
@@ -94,7 +118,7 @@ def recognize_speech(source="file", lang: str = "auto", whisper_model: str = "ba
     Unified function for CLI/UI: uses Whisper for all Indian languages. Supports mic or file.
     """
     stt = STT(whisper_model=whisper_model)
-    return stt.recognize(source=source, language=lang, duration=duration, file_path=file_path or "")
+    return stt.recognize(source=source, language=lang, file_path=file_path or "")
 
 if __name__ == "__main__":
     import argparse
@@ -106,8 +130,17 @@ if __name__ == "__main__":
     parser.add_argument('--duration', type=int, default=5, help='Mic record duration (seconds)')
     args = parser.parse_args()
     if args.mic:
-        print("Recording from mic and transcribing with Whisper...")
-        print("Recognized:", recognize_speech(source="mic", lang=args.lang, whisper_model=args.model, duration=args.duration))
+        print("Recording from mic. Press Ctrl+C to stop and transcribe.")
+        stt = STT(whisper_model=args.model)
+        try:
+            stt.record_from_mic()
+            while True:
+                stt.append_mic_frame()
+        except KeyboardInterrupt:
+            print("\nStopping recording and transcribing...")
+            audio_path = stt.stop_recording_from_mic()
+            result = stt.transcribe_audio(audio_path, language=args.lang)
+            print("Recognized:", result)
     elif args.file:
         print("Transcribing file with Whisper...")
         print("Recognized:", recognize_speech(source="file", file_path=args.file, lang=args.lang, whisper_model=args.model))
