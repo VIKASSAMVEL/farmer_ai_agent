@@ -9,8 +9,12 @@ from kivy.uix.gridlayout import GridLayout
 
 import sys
 import os
+# Ensure project root is in sys.path for all imports
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from utils.env_loader import load_env_local
-sys.path.append('..')
 try:
     from advisory.advisor import get_crop_advice
     from data.faq import FAQ
@@ -81,6 +85,20 @@ class ChatScreen(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
+        # Initialize user_manager for user profile/history features
+        try:
+            from data.user_profile import UserManager
+            self.user_manager = UserManager()
+            # Optionally, set a default user or prompt for user selection here
+            users = self.user_manager.list_users()
+            if users:
+                self.user_manager.switch_user(users[0])
+            else:
+                self.user_manager.add_user('default')
+                self.user_manager.switch_user('default')
+        except Exception as e:
+            self.user_manager = None
+            print(f"UserManager init error: {e}")
 
         # --- Chat history area ---
         self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
@@ -109,15 +127,34 @@ class ChatScreen(BoxLayout):
             "Translate": IOSButton(text="Translate", on_press=self.translate_action),
             "Analytics": IOSButton(text="Analytics", on_press=self.analytics_action),
             "TTS Voices": IOSButton(text="TTS Voices", on_press=self.tts_voices_action),
+            "Clear History": IOSButton(text="Clear History", on_press=self.clear_history_action),
             "Exit": IOSButton(text="Exit", on_press=self.exit_action)
         }
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
         self.add_widget(feature_layout)
+    def clear_history_action(self, instance):
+        try:
+            if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
+                self.user_manager.current_user.clear_history()
+                self.add_bubble("User history cleared.", is_user=False)
+            else:
+                self.add_bubble("User profile not loaded.", is_user=False)
+        except Exception as e:
+            self.add_bubble(f"Error clearing history: {e}", is_user=False)
+    def show_user_profile_info(self):
+        if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
+            last_adv = self.user_manager.current_user.get_last_advisory()
+            all_q = self.user_manager.current_user.get_all_queries()
+            meta = self.user_manager.current_user.get_metadata()
+            self.add_bubble(f"Last advisory: {last_adv}", is_user=False)
+            self.add_bubble(f"All queries: {all_q}", is_user=False)
+            self.add_bubble(f"User metadata: {meta}", is_user=False)
 
     def translate_action(self, instance):
         self.add_bubble("Enter text to translate:", is_user=False)
         self.awaiting_translate_text = True
+
     def input_action(self, instance):
         self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
         self.awaiting_input_mode = True
@@ -168,6 +205,7 @@ class ChatScreen(BoxLayout):
     def advisory_action(self, instance):
         self.add_bubble("Please enter your crop name for advisory:", is_user=False)
         self.awaiting_advisory = True
+        self.show_user_profile_info()
 
 
     def faq_action(self, instance):
@@ -234,15 +272,18 @@ class ChatScreen(BoxLayout):
         try:
             if hasattr(self, 'awaiting_translate_text') and self.awaiting_translate_text:
                 self._translate_text = user_text.strip()
-                self.add_bubble("Enter target language code (e.g., hi for Hindi):", is_user=False)
+                self.add_bubble("Enter target language code (hi=Hindi, ta=Tamil, te=Telugu, kn=Kannada, ml=Malayalam):", is_user=False)
                 self.awaiting_translate_lang = True
                 self.awaiting_translate_text = False
             elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
                 tgt_lang = user_text.strip() or "hi"
                 from nlp.translate import OfflineTranslator
                 translator = OfflineTranslator()
-                translated = translator.translate(self._translate_text)
-                self.add_bubble(f"Translation: {translated}", is_user=False)
+                translated = translator.translate(self._translate_text, "en", tgt_lang)
+                if translated.startswith("[Error]"):
+                    self.add_bubble(f"Translation failed: {translated}", is_user=False)
+                else:
+                    self.add_bubble(f"Translation: {translated}", is_user=False)
                 self.awaiting_translate_lang = False
             elif self.awaiting_input_mode:
                 mode = user_text.strip()
@@ -308,9 +349,13 @@ class ChatScreen(BoxLayout):
                     self._last_advisory_soil = soil
                     advice = get_crop_advice(crop, soil if soil else None)
                     self._last_advisory = advice
-                    self.add_bubble("Personalized Advisory:", is_user=False)
+                    self.add_bubble("=== STRUCTURED ADVISORY ===", is_user=False)
                     import json
                     self.add_bubble(json.dumps(advice, indent=2, ensure_ascii=False), is_user=False)
+                    self.add_bubble("=== FORMATTED ADVISORY ===", is_user=False)
+                    self.add_bubble(advice['formatted'], is_user=False)
+                    if advice.get('care_instructions'):
+                        self.add_bubble(f"First Care Instruction: {advice['care_instructions'][0]}", is_user=False)
                     self.add_bubble("Was this advice helpful? (y/n):", is_user=False)
                     self.awaiting_advisory_feedback = True
                 else:
@@ -549,6 +594,14 @@ class ChatScreen(BoxLayout):
                 crop = self.extract_crop(text)
                 soil = self.extract_soil(text)
                 advice = get_crop_advice(crop, soil)
+                # Save to user profile if available
+                try:
+                    from data.user_profile import UserManager
+                    if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
+                        self.user_manager.current_user.add_query(f"{crop}, {soil}", advice)
+                        self.show_user_profile_info()
+                except Exception as e:
+                    self.add_bubble(f"(User profile error: {e})", is_user=False)
                 return f"Advisory for {crop} ({soil}):\n" + str(advice)
             else:
                 return "Advisory module not available."

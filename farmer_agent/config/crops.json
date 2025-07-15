@@ -8,5 +8,45 @@
     "recommended_soil": "Clay Loam",
     "climate_smart_tips": ["Practice alternate wetting and drying.", "Use drought-resistant varieties."],
     "care_instructions": ["Monitor for stem borers.", "Maintain proper water levels."]
+  },
+  "Wheat": {
+    "recommended_soil": "Loam",
+    "climate_smart_tips": ["Use zero tillage to conserve soil moisture.", "Rotate crops to improve soil health."],
+    "care_instructions": ["Apply nitrogen fertilizer at tillering stage.", "Irrigate at critical growth stages."]
+  },
+  "Maize": {
+    "recommended_soil": "Well-drained Loam",
+    "climate_smart_tips": ["Use raised beds in flood-prone areas.", "Apply organic manure before sowing."],
+    "care_instructions": ["Thin seedlings to optimal spacing.", "Control weeds during early growth."]
+  },
+  "Groundnut": {
+    "recommended_soil": "Sandy Loam",
+    "climate_smart_tips": ["Practice crop rotation with cereals.", "Use gypsum to improve pod development."],
+    "care_instructions": ["Irrigate at flowering and pegging stages.", "Check for leaf spot and rust."]
+  },
+  "Sugarcane": {
+    "recommended_soil": "Deep Loam",
+    "climate_smart_tips": ["Adopt drip irrigation for water saving.", "Use trash mulching to conserve moisture."],
+    "care_instructions": ["Apply fertilizer in split doses.", "Control borers and whiteflies."]
+  },
+  "Cotton": {
+    "recommended_soil": "Black Soil",
+    "climate_smart_tips": ["Use short-duration varieties in drought areas.", "Intercrop with pulses for soil fertility."],
+    "care_instructions": ["Monitor for bollworms.", "Apply potash for better boll development."]
+  },
+  "Soybean": {
+    "recommended_soil": "Clay Loam",
+    "climate_smart_tips": ["Use certified seeds for better yield.", "Practice timely sowing for uniform germination."],
+    "care_instructions": ["Inoculate seeds with Rhizobium.", "Control weeds within 30 days of sowing."]
+  },
+  "Chickpea": {
+    "recommended_soil": "Sandy Loam",
+    "climate_smart_tips": ["Use raised beds in waterlogged areas.", "Apply organic manure before sowing."],
+    "care_instructions": ["Irrigate at pod formation.", "Protect from pod borer."]
+  },
+  "Banana": {
+    "recommended_soil": "Rich Loam",
+    "climate_smart_tips": ["Use tissue-cultured plants for uniform growth.", "Mulch with dry leaves to retain moisture."],
+    "care_instructions": ["Support plants to prevent lodging.", "Apply potassium-rich fertilizer."]
   }
 }

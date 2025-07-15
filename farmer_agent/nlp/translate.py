@@ -3,12 +3,17 @@
 # To expand language support, use MarianMT models from Hugging Face.
 # Supported languages: Hindi (hi), Tamil (ta), Telugu (te), Kannada (kn), Malayalam (ml), English (en), and more.
 # Example usage: translator.translate(text, src_lang, tgt_lang)
+
 import sys
 try:
     from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 except ImportError:
     print("Please install transformers: pip install transformers")
     sys.exit(1)
+try:
+    from indictrans import IndicProcessor
+except ImportError:
+    IndicProcessor = None
 
 
 # Use MarianMT for Hindi and Malayalam, IndicTrans2 for Tamil, Telugu, Kannada, Malayalam
@@ -26,11 +31,22 @@ DEFAULT_MODEL = MARIAN_MODELS[("en", "hi")]
 
 
 
+
+LANG_CODE_MAP = {
+    "en": "eng_Latn",
+    "hi": "hin_Deva",
+    "ta": "tam_Taml",
+    "te": "tel_Telu",
+    "kn": "kan_Knda",
+    "ml": "mal_Mlym",
+}
+
 class OfflineTranslator:
     def __init__(self, model_name=None):
         self.model_name = model_name or DEFAULT_MODEL
         self.tokenizer = None
         self.model = None
+        self.processor = IndicProcessor(inference=True) if IndicProcessor else None
         self._load_model(self.model_name)
 
     def _load_model(self, model_name):
@@ -55,15 +71,39 @@ class OfflineTranslator:
             # Use IndicTrans2 for these pairs
             if self.model_name != INDICTRANS2_MODEL:
                 self._load_model(INDICTRANS2_MODEL)
-            if not self.tokenizer or not self.model:
-                return "[Error] Translation model not loaded."
+            if not self.tokenizer or not self.model or not self.processor:
+                return "[Error] Translation model or processor not loaded."
             try:
-                # IndicTrans2 expects a special format: <2xx> at the start of the input for target lang
-                tgt_prefix = f"<2{tgt_lang}> "
-                input_text = tgt_prefix + text
-                inputs = self.tokenizer(input_text, return_tensors="pt")
-                outputs = self.model.generate(**inputs)
-                return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                src_code = LANG_CODE_MAP.get(src_lang, src_lang)
+                tgt_code = LANG_CODE_MAP.get(tgt_lang, tgt_lang)
+                batch = self.processor.preprocess_batch([text], src_lang=src_code, tgt_lang=tgt_code)
+                inputs = self.tokenizer(
+                    batch,
+                    truncation=True,
+                    padding="longest",
+                    return_tensors="pt",
+                    return_attention_mask=True,
+                )
+                import torch
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                self.model = self.model.to(device)
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                with torch.no_grad():
+                    generated_tokens = self.model.generate(
+                        **inputs,
+                        use_cache=True,
+                        min_length=0,
+                        max_length=256,
+                        num_beams=5,
+                        num_return_sequences=1,
+                    )
+                generated_tokens = self.tokenizer.batch_decode(
+                    generated_tokens,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=True,
+                )
+                translations = self.processor.postprocess_batch(generated_tokens, lang=tgt_code)
+                return translations[0]
             except Exception as e:
                 return f"[Error] Translation failed: {e}"
         else:

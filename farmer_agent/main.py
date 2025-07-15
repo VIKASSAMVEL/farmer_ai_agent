@@ -47,7 +47,8 @@ def main():
         print("5. Weather Estimation")
         print("6. Analytics")
         print("7. List TTS Voices")
-        print("8. Exit")
+        print("8. Translate Text")
+        print("9. Exit")
         choice = input("Enter choice: ").strip()
 
         if choice == "1":
@@ -84,16 +85,19 @@ def main():
             crop = input("Enter crop name for advisory: ")
             soil = input("Enter soil type (optional): ")
             advice = get_crop_advice(crop, soil if soil else None)
-            print(acc.format_text("Personalized Advisory:"))
+            print(acc.format_text("\n=== STRUCTURED ADVISORY ==="))
             print(json.dumps(advice, indent=2, ensure_ascii=False))
-            acc.speak_text(advice if isinstance(advice, str) else advice.get('care_instructions', ['No instructions'])[0])
+            print(acc.format_text("\n=== FORMATTED ADVISORY ==="))
+            print(advice['formatted'])
+            # Speak first care instruction if available
+            if advice.get('care_instructions'):
+                acc.speak_text(advice['care_instructions'][0])
             # Collect feedback
             feedback = input("Was this advice helpful? (y/n): ").strip().lower()
             feedback_val = 'positive' if feedback == 'y' else ('negative' if feedback == 'n' else None)
             # Store feedback in the advisory dict for analytics
-            if isinstance(advice, dict):
-                if feedback_val:
-                    advice['feedback'] = feedback_val
+            if feedback_val:
+                advice['feedback'] = feedback_val
             user.add_query(f"{crop}, {soil}", advice)
 
         elif choice == "3":
@@ -140,7 +144,6 @@ def main():
             print(f"Advice: {weather.get('advice', 'N/A')}")
             warnings = weather.get('warnings', [])
             if warnings:
-                print("Warnings:")
                 for w in warnings:
                     print(f"- {w}")
 
@@ -156,6 +159,16 @@ def main():
             list_voices()
 
         elif choice == "8":
+            text = input("Enter text to translate: ")
+            tgt_lang = input("Enter target language code (hi=Hindi, ta=Tamil, te=Telugu, kn=Kannada, ml=Malayalam): ").strip() or "hi"
+            from nlp.translate import OfflineTranslator
+            translator = OfflineTranslator()
+            translated = translator.translate(text, "en", tgt_lang)
+            if translated.startswith("[Error]"):
+                print(acc.format_text(f"Translation failed: {translated}"))
+            else:
+                print(acc.format_text(f"Translation: {translated}"))
+        elif choice == "9":
             print(acc.format_text("Goodbye!"))
             break
         else:
