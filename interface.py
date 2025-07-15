@@ -380,12 +380,18 @@ if __name__ == "__main__":
                 self.awaiting_text_input = False
             elif self.awaiting_image_path:
                 image_path = user_text.strip()
-                if PlantIdentifier:
+                try:
+                    from farmer_agent.nlp.cv import PlantIdentifier
                     identifier = PlantIdentifier()
-                    result = identifier.identify(image_path)
-                    self.add_bubble(f"Plant Identification Result: {result}", is_user=False)
-                else:
-                    self.add_bubble("PlantIdentifier module not available.", is_user=False)
+                    plant_result = identifier.identify(image_path)
+                    # Use agentic_response to generate a rich answer
+                    from farmer_agent.main import agentic_response
+                    user_query = f"What disease is in this image?"
+                    response = agentic_response(user_query, plant_result=plant_result)
+                    self.add_bubble(f"Plant Identification Result: {plant_result}", is_user=False)
+                    self.add_bubble(f"Agentic Advice: {response}", is_user=False)
+                except Exception as e:
+                    self.add_bubble(f"Error in plant identification: {str(e)}", is_user=False)
                 self.awaiting_image_path = False
             elif self.awaiting_advisory:
                 if get_crop_advice:
