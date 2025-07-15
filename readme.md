@@ -17,67 +17,68 @@ The Farmer Agent is an AI-powered tool designed to provide tailored agricultural
    - Add one-time or recurring reminders for any crop activity.
    - Delete reminders by crop, activity, or date.
    - All calendar/reminder features available in both CLI and UI.
-8. **Enhanced FAQ Module:**
-   - Fuzzy/partial search, tag/category filtering, and related questions.
-   - Large, plant-specific FAQ database.
-9. **Analytics & Feedback:**
-   - Collects user feedback on advisories and tracks engagement.
-   - Provides user activity summaries, crop trends, and feedback analytics.
-10. **Secure API Key Handling:**
-    - Weather API key is loaded from `env.local` (excluded from git) and shared across modules.
-    - No API keys are exposed in code or version control.
-11. **Robust Error Handling:**
-    - All modules handle missing dependencies gracefully.
-    - UI and CLI both provide clear error messages and fallback options.
 
-## Technical Requirements
+# Farmer AI Agent
 
-- Python 3.7 or later
-- pip (Python package installer)
-- [openai-whisper](https://github.com/openai/whisper) for speech-to-text (required for both CLI and UI)
-- [pyaudio](https://pypi.org/project/PyAudio/) for microphone input (required for both CLI and UI)
-- Transformers library from Hugging Face for NLP and computer vision
-- Requests library for API integrations
+## Overview
+Farmer AI Agent is an offline, free, multi-user agricultural assistant for Indian farmers. It provides crop advisory, weather forecasts, plant disease detection, translation, analytics, and more, with both CLI and modern Kivy UI. It integrates local LLM (Ollama) for dynamic, conversational advice and tips.
 
-## Installation
+## Features
+- **Multi-user support:** Switch and manage user profiles, track history and metadata.
+- **Crop Advisory:** Get structured and formatted advice for crops and soils.
+- **Weather Forecast:** Automatically detects your location and displays a 7-day forecast using OpenWeatherMap API, plus LLM-generated farming tips.
+- **Plant Disease Detection:** Upload leaf images, get disease predictions via Roboflow, and receive LLM-generated solutions and medicine recommendations.
+- **FAQ & Guidance:** Ask questions and get answers from local LLM (Ollama) for dynamic, up-to-date advice.
+- **Translation:** Translate text to major Indian languages offline.
+- **Text-to-Speech:** Listen to advice and responses in your preferred language.
+- **Analytics:** View user activity and crop trends.
+- **Robust Logging:** All UI/CLI interactions are logged with timestamps and duplicate prevention.
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/farmer-agent.git
-   cd farmer-agent
+## LLM Integration
+- Uses [Ollama](https://ollama.com/) to run local models (e.g., llama3:8b) for:
+  - FAQ responses
+  - Weather tips
+  - Plant disease solutions/medicine
+  - Conversational agentic advice
+
+## Setup
+1. **Install Python 3.7+**
+2. **Install dependencies:**
+   ```sh
+   pip install -r farmer_agent/requirements.txt
    ```
-
-
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set Up Weather API Key:**
-   - Create a file named `env.local` in the project root with the following content:
-     ```
-     OPENWEATHER_API_KEY=your_openweather_api_key_here
-     ```
-   - The file is already excluded from git via `.gitignore`.
+3. **Install Ollama and download a model:**
+   - [Ollama install guide](https://ollama.com/download)
+   - Example: `ollama pull llama3:8b`
+   - Start Ollama server: `ollama serve`
+4. **Set API keys:**
+   - OpenWeatherMap: Set `OPENWEATHER_API_KEY` in your environment or `.env.local`
+   - Roboflow: Set API key in `cv.py` if needed
 
 ## Usage
+- **CLI:**
+  ```sh
+  python farmer_agent/main.py
+  ```
+- **UI:**
+  ```sh
+  python interface.py
+  ```
 
-### Launching the Agent
+## Data Files
+- All static data (crops, market prices, soil, weather patterns) is in `farmer_agent/data/`
 
-**CLI:**
-```bash
-python farmer_agent/main.py
-```
+## How It Works
+- **Weather:** Detects your city via IP, fetches 7-day forecast, and queries LLM for actionable tips.
+- **Disease Detection:** Upload image, get prediction, and LLM-generated solution/medicine.
+- **FAQ:** All questions answered by local LLM for dynamic, up-to-date advice.
+- **User History:** All queries and advice are saved per user profile.
 
-**UI (Kivy):**
-```bash
-python farmer_agent/ui/interface.py
-```
+## Contributing
+Pull requests and suggestions welcome!
 
-### Speech-to-Text (STT)
-
-**CLI:**
-You can use the mic or an audio file for speech input. Example:
+## License
+MIT
 ```bash
 python farmer_agent/nlp/stt.py --mic           # Record from mic, auto language detection
 python farmer_agent/nlp/stt.py --file path/to/audio.wav  # Transcribe audio file
