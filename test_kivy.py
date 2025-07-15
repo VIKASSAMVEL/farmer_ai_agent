@@ -324,8 +324,45 @@ class ChatScreen(BoxLayout):
     def set_language(self, lang_code):
         self.language_dropdown.dismiss()
         self.state['language'] = lang_code
-        # TODO: Call translate function for UI, responses, and speech
+        # Translate all UI elements and responses to the selected language
+        self.translate_ui(lang_code)
         self.add_bubble(f"Language set to: {lang_code}", is_user=False)
+
+    def translate_ui(self, lang_code):
+        # Translate static UI text
+        translations = {
+            'en': {
+                'Farmer AI Agent': 'Farmer AI Agent',
+                'Select Mode': 'Select Mode',
+                'Input Type': 'Input Type',
+                'Send': 'Send',
+                '🌐 Language': '🌐 Language',
+                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design',
+            },
+            'ta': {
+                'Farmer AI Agent': '\u0baa\u0bbe\u0bb0\u0bcd\u0bae\u0bc6\u0bb0\u0bcd \u0a8e\u0b90 \u0b8f\u0b9c\u0bc6\u0ba3\u0bcd\u0b9f\u0bcd',
+                'Select Mode': '\u0bae\u0bc1\u0b9f\u0bbf\u0baf\u0bc8 \u0ba4\u0bc6\u0bb0\u0bbf\u0b99\u0bcd\u0b95',
+                'Input Type': '\u0b87\u0ba9\u0bcd\u0baa\u0bc1\u0b9f\u0bcd \u0b95\u0bcd\u0bb3\u0bbf',
+                'Send': '\u0b85\u0ba9\u0bc1\u0baa\u0bc1',
+                '🌐 Language': '\u0bae\u0bca\u0bb4\u0bbf',
+                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 \u0baa\u0bbe\u0bb0\u0bcd\u0bae\u0bc6\u0bb0\u0bcd \u0b8e\u0b90 \u0b8f\u0b9c\u0bc6\u0ba3\u0bcd\u0b9f\u0bcd | \u0b92\u0baa\u0ba9\u0bcd \u0b9a\u0bcb\u0bb0\u0bcd\u0baa\u0bcd | \u0b85\u0ba3\u0bcd\u0baa\u0bc1\u0b95\u0bae\u0bcd \u0ba8\u0bc6\u0bb1\u0bbf\u0b95\u0bcd\u0b95\u0bc1\u0bae\u0bcd',
+            },
+            # Add more language translations as needed
+        }
+        lang_map = translations.get(lang_code, translations['en'])
+        # Update header
+        self.children[-1].children[1].text = lang_map['Farmer AI Agent']
+        # Update mode dropdown button
+        self.mode_btn.text = lang_map['Select Mode']
+        # Update input dropdown button
+        self.input_btn.text = lang_map['Input Type']
+        # Update send button
+        self.children[-3].children[0].text = lang_map['Send']
+        # Update language button
+        self.language_btn.text = lang_map['🌐 Language']
+        # Update footer
+        self.children[0].children[0].text = lang_map['© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design']
+        # Optionally, translate chat bubbles and other dynamic content
 
     def input_action(self, instance):
         if recognize_speech:
@@ -364,10 +401,34 @@ class ChatScreen(BoxLayout):
             self.calendar = CropCalendar()
             self.reminders = Reminders()
             self.state["mode"] = "calendar_option"
-            self.add_bubble("Calendar options: 1. View crop schedule 2. List crops 3. Add reminder 4. Add recurring reminder 5. Delete reminder 6. Next activity\nEnter option number:", is_user=False)
+            # Show calendar options as clickable buttons
+            options = [
+                ("View crop schedule", "1"),
+                ("List crops", "2"),
+                ("Add reminder", "3"),
+                ("Add recurring reminder", "4"),
+                ("Delete reminder", "5"),
+                ("Next activity", "6")
+            ]
+            option_layout = BoxLayout(orientation='vertical', size_hint_y=None)
+            option_layout.bind(minimum_height=option_layout.setter('height'))
+            for label, value in options:
+                btn = Button(text=label, size_hint_y=None, height=44)
+                btn.bind(on_release=lambda btn, v=value: self.calendar_option_selected(v))
+                option_layout.add_widget(btn)
+            popup = Popup(title="Calendar Options", content=option_layout, size_hint=(0.7, 0.7))
+            self._calendar_popup = popup
+            popup.open()
         except Exception as e:
             logging.error(f"calendar_action error: {str(e)}")
             self.add_bubble(f"Calendar module error: {str(e)}", is_user=False)
+
+    def calendar_option_selected(self, value):
+        # Close the popup and pass the value as if user typed it
+        if hasattr(self, '_calendar_popup') and self._calendar_popup:
+            self._calendar_popup.dismiss()
+            self._calendar_popup = None
+        self.send_message(type('FakeInstance', (), {'text': value})())
 
     def faq_action(self, instance):
         if not FAQ:
@@ -506,7 +567,7 @@ class ChatScreen(BoxLayout):
             self.add_bubble(text, is_user=is_user)
 
     def send_message(self, instance):
-        user_text = self.text_input.text.strip()
+        user_text = self.text_input.text.strip() if instance is None else getattr(instance, 'text', '').strip()
         if not user_text:
             return
         self.add_bubble(user_text, is_user=True)
