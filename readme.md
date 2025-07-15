@@ -1,148 +1,177 @@
-# Farmer Agent
-
-
-The Farmer Agent is an AI-powered tool designed to provide tailored agricultural support to small-scale farmers and non-farmers across the world. It leverages natural language processing (NLP), computer vision, and real-time data integration to offer personalized guidance in various languages and mediums. The system now features a modern Kivy-based UI and a CLI, both with full feature parity .
-
-## Key Features
-
-
-1. **Voice, Text, and Image Input:** Easy communication through voice commands (with automatic language detection), text inputs, or image uploads. The UI features a mic button for speech-to-text: press to start recording, press again to stop and transcribe.
-2. **Multilingual NLP & Speech-to-Text:** Understands and responds in regional languages and dialects. Speech-to-text is powered by Whisper (OpenAI), supporting all major Indian languages and automatic language detection from audio (no manual language selection needed).
-3. **Plant Identification via Computer Vision:** Detects plant species and diseases using image input.
-4. **Personalized Crop Advisory:** Integrates soil, weather, and market data to give tailored advice.
-5. **Climate-Smart Recommendations:** Encourages sustainable practices and water-saving techniques.
-6. **Offline Mode:** Basic features function without internet access (e.g., image diagnosis, preloaded guidance).
-7. **Advanced Crop Calendar & Reminders:**
-   - View crop schedules, list all crops, and get next scheduled activity for any crop.
-   - Add one-time or recurring reminders for any crop activity.
-   - Delete reminders by crop, activity, or date.
-   - All calendar/reminder features available in both CLI and UI.
-
 # Farmer AI Agent
 
-## Overview
-Farmer AI Agent is an offline, free, multi-user agricultural assistant for Indian farmers. It provides crop advisory, weather forecasts, plant disease detection, translation, analytics, and more, with both CLI and modern Kivy UI. It integrates local LLM (Ollama) for dynamic, conversational advice and tips.
+**An offline-first, AI-powered agricultural assistant designed to provide Indian farmers with actionable advice, reminders, and tools to improve crop management and decision-making.**
 
-## Features
-- **Multi-user support:** Switch and manage user profiles, track history and metadata.
-- **Crop Advisory:** Get structured and formatted advice for crops and soils.
-- **Weather Forecast:** Automatically detects your location and displays a 7-day forecast using OpenWeatherMap API, plus LLM-generated farming tips.
-- **Plant Disease Detection:** Upload leaf images, get disease predictions via Roboflow, and receive LLM-generated solutions and medicine recommendations.
-- **FAQ & Guidance:** Ask questions and get answers from local LLM (Ollama) for dynamic, up-to-date advice.
-- **Translation:** Translate text to major Indian languages offline.
-- **Text-to-Speech:** Listen to advice and responses in your preferred language.
-- **Analytics:** View user activity and crop trends.
-- **Robust Logging:** All UI/CLI interactions are logged with timestamps and duplicate prevention.
+The Farmer AI Agent is a comprehensive solution that combines local data, machine learning models, and an intuitive user interface to address the daily challenges faced by farmers. It operates primarily offline, with optional online features for enhanced, real-time data.
 
-## LLM Integration
-- Uses [Ollama](https://ollama.com/) to run local models (e.g., llama3:8b) for:
-  - FAQ responses
-  - Weather tips
-  - Plant disease solutions/medicine
-  - Conversational agentic advice
+*(Placeholder for a screenshot or GIF of the Kivy GUI in action)*
 
-## Setup
-1. **Install Python 3.7+**
-2. **Install dependencies:**
-   ```sh
-   pip install -r farmer_agent/requirements.txt
-   ```
-3. **Install Ollama and download a model:**
-   - [Ollama install guide](https://ollama.com/download)
-   - Example: `ollama pull llama3:8b`
-   - Start Ollama server: `ollama serve`
-4. **Set API keys:**
-   - OpenWeatherMap: Set `OPENWEATHER_API_KEY` in your environment or `.env.local`
-   - Roboflow: Set API key in `cv.py` if needed
+---
 
-## Usage
-- **CLI:**
-  ```sh
-  python farmer_agent/main.py
-  ```
-- **UI:**
-  ```sh
-  python interface.py
-  ```
+## ✨ Core Features
 
-## Data Files
-- All static data (crops, market prices, soil, weather patterns) is in `farmer_agent/data/`
+The project is built on a modular architecture, with distinct components for each key function:
 
-## How It Works
-- **Weather:** Detects your city via IP, fetches 7-day forecast, and queries LLM for actionable tips.
-- **Disease Detection:** Upload image, get prediction, and LLM-generated solution/medicine.
-- **FAQ:** All questions answered by local LLM for dynamic, up-to-date advice.
-- **User History:** All queries and advice are saved per user profile.
+*   **🧑‍🌾 Personalized Crop Advisory:** Get tailored advice for specific crops (e.g., Tomato, Rice, Wheat). The agent considers soil type and provides recommendations on best practices, climate-smart tips, and care instructions using local data.
 
-## Contributing
-Pull requests and suggestions welcome!
+*   **🌿 Plant Disease Identification (CV):** Upload an image of a plant leaf, and the agent will use a computer vision model (via Roboflow) to identify potential diseases. It then leverages a local LLM to provide practical solutions and medicine recommendations.
 
-## License
-MIT
-```bash
-python farmer_agent/nlp/stt.py --mic           # Record from mic, auto language detection
-python farmer_agent/nlp/stt.py --file path/to/audio.wav  # Transcribe audio file
+*   **☀️ Smart Weather Forecasting:**
+    *   **Online:** Fetches a 7-day forecast using the OpenWeatherMap API, detecting the user's location automatically.
+    *   **Offline:** Falls back to seasonal weather patterns if offline.
+    *   **LLM-Powered Tips:** Generates practical farming tips (e.g., for irrigation, disease prevention) based on the weekly forecast.
+
+*   **🗣️ Advanced NLP Suite (Offline):**
+    *   **Speech-to-Text:** Transcribe voice commands and queries from a microphone or audio file using OpenAI's Whisper model, with support for major Indian languages.
+    *   **Text-to-Speech:** Reads out responses and guidance using the system's installed voices.
+    *   **Offline Translation:** Translate text between English and several regional Indian languages (Hindi, Tamil, Telugu, Kannada, Malayalam) using MarianMT and IndicTrans2 models.
+
+*   **❓ FAQ & Guidance:** Ask questions in natural language. The agent uses a local LLM (if available) or a static FAQ database to provide answers on a wide range of farming topics.
+
+*   **📅 Crop Calendar & Reminders:**
+    *   View detailed activity schedules for various crops.
+    *   Set one-time or recurring reminders for crucial farming tasks like fertilizing, irrigating, and harvesting.
+    *   Check the next upcoming activity for a specific crop.
+
+*   **📊 User Profiles & Analytics:**
+    *   Supports multiple user profiles to keep a history of queries and advice.
+    *   Analyzes interaction data to identify crop trends and measure the effectiveness of the advice provided.
+
+*   **💻 Dual Interfaces:**
+    *   **Graphical User Interface (GUI):** A modern, chat-based interface built with Kivy, featuring interactive menus, image uploads, and multi-language support.
+    *   **Command-Line Interface (CLI):** A lightweight, menu-driven interface for users who prefer the terminal.
+
+---
+
+## 🛠️ Technology Stack
+
+*   **Backend:** Python
+*   **GUI:** Kivy
+*   **Machine Learning & NLP:**
+    *   `transformers` (Hugging Face) for offline translation.
+    *   `openai-whisper` for speech-to-text.
+    *   `inference-sdk` for Roboflow computer vision.
+    *   `pyttsx3` for text-to-speech.
+*   **Local LLM Integration:** Ollama (supports models like Llama 3, Mistral).
+*   **Data Handling:** JSON for local databases and configuration.
+
+---
+
+## 🏗️ Architecture
+
+The project follows a clean, modular structure that separates core logic from the user interface.
+
+*   `farmer_agent/`: Contains all the core backend logic.
+    *   `advisory/`: Generates crop advice.
+    *   `data/`: Holds all offline data files (FAQs, crop calendars, user history, etc.).
+    *   `nlp/`: Manages all Natural Language Processing tasks (STT, TTS, CV, Translate).
+    *   `utils/`: Helper functions for file handling, environment loading, and accessibility.
+    *   `config/`: Configuration files like crop definitions.
+*   `main.py`: The entry point for the Command-Line Interface (CLI).
+*   `test_kivy.py`: The entry point for the Kivy Graphical User Interface (GUI).
+*   `data/`: This directory is crucial as it stores the "brain" of the agent in an offline context.
+
+This offline-first approach ensures that the agent remains functional even without an internet connection, with online services acting as an enhancement.
+
+---
+
+## 🚀 Getting Started
+
+Follow these steps to set up and run the Farmer AI Agent on your local machine.
+
+### 1. Prerequisites
+
+*   Python 3.8+
+*   Git
+*   (Optional but Recommended) Ollama for running a local LLM. After installing, pull a model:
+    ```sh
+    ollama pull llama3:8b
+    ```
+
+### 2. Clone the Repository
+
+```sh
+git clone <your-repository-url>
+cd farmer_ai_agent
 ```
 
-**UI:**
-Press the mic button to start recording, and press again to stop. The recognized text and detected language will be shown in the chat.
+### 3. Install Dependencies
 
-### Calendar & Reminders (CLI/UI)
-- View crop schedules, list all crops, add/delete reminders, add recurring reminders, and get next activity for any crop.
-- All features are available in both CLI and UI via menu or button.
+It is recommended to use a virtual environment.
 
-### FAQ & Analytics
-- Search FAQs by keyword, tag, or partial match.
-- View user activity, crop trends, and feedback analytics.
-
-### Weather
-- Weather estimation uses OpenWeatherMap API (API key required in `env.local`).
-
-## Example Output
-
-**Speech-to-Text Example (UI):**
-```
-User presses mic button...
-Recording... (speak in any supported language)
-User presses mic button again.
-Recognized Text: नमस्ते, मैं किसान हूँ
-Detected Language: hi
+```sh
+python -m venv venv
+source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 ```
 
-```plaintext
-Based on your input, we recommend the following: ...
-Plant Type: Tomato
-Diseases Detected: [Bacterial Spot]
-Weather Data: {'temperature': 25, 'humidity': 70}
-Soil Condition: Sandy Soil
-Market Prices: {'Tomato': 1.50}
+Install the required packages. Note that `torch` and `pyaudio` may have system-specific installation steps.
 
-Crop Calendar Example:
-```
-Available crops: Tomato, Rice, ...
-Schedule for Tomato:
-{
-  "sowing": "2025-07-01",
-  "fertilizing": ["2025-07-10", "2025-07-20"],
-  ...
-}
-Next activity for Tomato: fertilizing on 2025-07-20
+```sh
+# First, install PyTorch from the official site: https://pytorch.org/get-started/locally/
+# Example for CPU:
+pip install torch torchvision torchaudio
+
+# Then install the rest of the requirements
+pip install kivy openai-whisper pyttsx3 requests transformers inference-sdk sentencepiece
+
+# For microphone input
+pip install pyaudio
 ```
 
-Reminder Example:
+### 4. Configure Environment Variables
+
+Create a file named `env.local` in the project root directory. This file is used to store API keys securely.
+
 ```
-Upcoming reminders:
-[
-  {"crop": "Tomato", "activity": "Fertilize", "date": "2025-07-20"},
-  {"crop": "Rice", "activity": "Irrigate", "date": "2025-07-18"}
-]
-```
+# env.local
+
+# For real-time weather forecasts (optional)
+OPENWEATHER_API_KEY=your_openweathermap_api_key
 ```
 
-## Contributing
+### 5. Run the Application
 
-Contributions are welcome! Please fork the repository and submit a pull request.
+You can run either the GUI or the CLI.
 
-## License
+**To run the Kivy GUI:**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```sh
+python test_kivy.py
+```
+
+**To run the CLI:**
+
+```sh
+python farmer_agent/main.py
+```
+
+---
+
+## ⚙️ Configuration
+
+The agent's knowledge base is stored in JSON files within the `farmer_agent/data/` and `farmer_agent/config/` directories. You can customize and expand the agent's capabilities by editing these files:
+
+*   `farmer_agent/config/crops.json`: Add or modify crop-specific data, care instructions, and tips.
+*   `farmer_agent/data/faq.json`: Expand the FAQ database with more questions and answers.
+*   `farmer_agent/data/crop_calendar.json`: Define or update crop schedules.
+*   `farmer_agent/data/soil_data.json`: Add information about different soil types.
+*   `farmer_agent/data/market_prices.json`: Update market price information.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! If you have an idea for a new feature or have found a bug, please open an issue to discuss it first.
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/YourFeature`).
+3.  Make your changes.
+4.  Commit your changes (`git commit -m 'Add some feature'`).
+5.  Push to the branch (`git push origin feature/YourFeature`).
+6.  Open a Pull Request.
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.

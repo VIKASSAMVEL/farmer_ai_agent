@@ -48,49 +48,67 @@ except ImportError as e:
 
 class ChatBubble(BoxLayout):
     def __init__(self, text, is_user=False, **kwargs):
-        super().__init__(orientation='horizontal', size_hint_y=None, padding=[10, 5, 10, 5], **kwargs)
+        super().__init__(orientation='horizontal', size_hint_y=None, padding=[16, 8, 16, 8], **kwargs)
         timestamp = datetime.now().strftime('%H:%M')
-        self.bubble_color = (0.2, 0.6, 0.2, 1) if is_user else (0.9, 0.9, 0.9, 1)
+        bubble_color = (33/255, 194/255, 94/255, 1) if is_user else (27/255, 38/255, 59/255, 1)
+        shadow_color = (0, 0, 0, 0.22)
+        avatar_size = 40
+        # Avatar icon
+        avatar_text = '🧑' if is_user else '🤖'
+        avatar = Label(text=avatar_text, font_size=28, size_hint=(None, None), size=(avatar_size, avatar_size), color=(1,1,1,1))
+        # Bubble label
         self.label = Label(
             text=text,
-            size_hint_x=0.85,
+            size_hint_x=0.75,
             halign='right' if is_user else 'left',
-            valign='top',
-            color=(1, 1, 1, 1) if is_user else (0, 0, 0, 1),
+            valign='middle',
+            color=(1, 1, 1, 1),
+            font_size=16,
             text_size=(Window.width * 0.7, None),
-            markup=True
+            markup=True,
+            opacity=0  # Start hidden for fade-in
         )
-        self.label.bind(texture_size=self._update_height)  # type: ignore
+        self.label.bind(texture_size=self._update_height)
         self.timestamp_label = Label(
             text=timestamp,
             size_hint_x=0.15,
             font_size=12,
-            color=(0.5, 0.5, 0.5, 1),
+            color=(0.7, 0.9, 0.7, 1),
             halign='right',
             valign='bottom'
         )
-        self.add_widget(self.label)
-        self.add_widget(self.timestamp_label)
-        with self.canvas.before:  # type: ignore
-            Color(0, 0, 0, 0.18)
-            self.shadow_rect = RoundedRectangle(radius=[17], pos=(self.pos[0]+2, self.pos[1]-2), size=(self.size[0], self.size[1]))
-            self.bg_color_instruction = Color(*self.bubble_color)
-            self.bg_rect = RoundedRectangle(radius=[15], pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg_rect, size=self._update_bg_rect)  # type: ignore
+        # Layout: avatar | bubble | timestamp (user right, agent left)
+        if is_user:
+            self.add_widget(self.timestamp_label)
+            self.add_widget(self.label)
+            self.add_widget(avatar)
+        else:
+            self.add_widget(avatar)
+            self.add_widget(self.label)
+            self.add_widget(self.timestamp_label)
+        with self.canvas.before:
+            Color(*shadow_color)
+            self.shadow_rect = RoundedRectangle(radius=[20], pos=(self.pos[0]+3, self.pos[1]-3), size=(self.size[0], self.size[1]))
+            Color(*bubble_color)
+            self.bg_rect = RoundedRectangle(radius=[20], pos=self.pos, size=self.size)
+        self.bind(pos=self._update_bg_rect, size=self._update_bg_rect)
+        # Fade-in animation for bubble
+        from kivy.animation import Animation
+        Animation(opacity=1, d=0.4, t='out_quad').start(self.label)
 
     def _update_bg_rect(self, *args):
         if hasattr(self, 'shadow_rect'):
-            self.shadow_rect.pos = (self.pos[0]+2, self.pos[1]-2)
+            self.shadow_rect.pos = (self.pos[0]+3, self.pos[1]-3)
             self.shadow_rect.size = (self.size[0], self.size[1])
         if hasattr(self, 'bg_rect'):
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
 
     def _update_height(self, *args):
-        min_height = 40
-        padding = 24
+        min_height = 48
+        padding = 28
         self.label.height = max(self.label.texture_size[1] + padding, min_height)
-        self.height = self.label.height + 10
+        self.height = self.label.height + 12
 
 def show_debug_popup(error_msg):
     content = BoxLayout(orientation='vertical')
@@ -112,13 +130,13 @@ class ChatScreen(BoxLayout):
 
         # --- Top bar with app title and language dropdown ---
         top_bar = BoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
-        header_label = Label(text='Farmer AI Agent', font_size=get_scaled(28), bold=True, color=(0.2, 0.6, 0.2, 1))
+        header_label = Label(text='🤖 Farmer AI Agent', font_size=get_scaled(32), bold=True, color=(33/255, 194/255, 94/255, 1))
         # Language dropdown
         self.language_dropdown = DropDown()
         self.language_options = [
             ("English", "en"), ("Hindi", "hi"), ("Tamil", "ta"), ("Telugu", "te"), ("Kannada", "kn"), ("Malayalam", "ml")
         ]
-        self.language_btn = Button(text="🌐 Language", size_hint=(None, 1), width=160)
+        self.language_btn = Button(text="🌐 Language", size_hint=(None, 1), width=160, background_normal='', background_color=(27/255, 38/255, 59/255, 1), color=(1,1,1,1), font_size=get_scaled(18))
         for lang_name, lang_code in self.language_options:
             btn = Button(text=lang_name, size_hint_y=None, height=44)
             btn.bind(on_release=lambda btn, code=lang_code: self.set_language(code))
@@ -139,7 +157,7 @@ class ChatScreen(BoxLayout):
             ("Translate", self.translate_action),
             ("Analytics", self.analytics_action)
         ]
-        self.mode_btn = Button(text="Select Mode", size_hint=(None, 1), width=180)
+        self.mode_btn = Button(text="Select Mode", size_hint=(None, 1), width=180, background_normal='', background_color=(33/255, 194/255, 94/255, 1), color=(1,1,1,1), font_size=get_scaled(18))
         for mode_name, mode_func in self.mode_options:
             btn = Button(text=mode_name, size_hint_y=None, height=44)
             btn.bind(on_release=lambda btn, func=mode_func: self.select_mode(func))
@@ -176,7 +194,7 @@ class ChatScreen(BoxLayout):
             ("Text", self.set_input_text),
             ("Image", self.set_input_image)
         ]
-        self.input_btn = Button(text="Input Type", size_hint=(None, 1), width=140)
+        self.input_btn = Button(text="📝 Input Type", size_hint=(None, 1), width=140, background_normal='', background_color=(27/255, 38/255, 59/255, 1), color=(1,1,1,1), font_size=get_scaled(18))
         for input_name, input_func in self.input_options:
             btn = Button(text=input_name, size_hint_y=None, height=44)
             btn.bind(on_release=lambda btn, func=input_func: func())
@@ -184,40 +202,47 @@ class ChatScreen(BoxLayout):
         self.input_btn.bind(on_release=self.input_dropdown.open)
         input_bar.add_widget(self.input_btn)
         # Add text input and send button as before
-        class RoundedInput(TextInput):
+        class ModernInput(TextInput):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
-                self.background_color = (0, 0, 0, 0)
+                self.background_color = (27/255, 38/255, 59/255, 1)
                 self.hint_text = 'Type your message...'
                 self.font_size = get_scaled(18)
                 self.padding = [get_scaled(16), get_scaled(12), get_scaled(16), get_scaled(12)]
-                self.foreground_color = (0, 0, 0, 1)  # Black text for visibility
-                with self.canvas.before:  # type: ignore
-                    Color(0.95, 0.95, 0.95, 1)
-                    self.bg_rect = RoundedRectangle(radius=[get_scaled(18)], pos=self.pos, size=self.size)
-                self.bind(pos=self._update_bg, size=self._update_bg)  # type: ignore
+                # Set foreground color to high-contrast white for visibility
+                self.foreground_color = (1, 1, 1, 1)
+                self.cursor_color = (1, 1, 1, 1)
+                self.hint_text_color = (0.8, 0.95, 0.8, 1)
+                with self.canvas.before:
+                    Color(33/255, 194/255, 94/255, 0.12)
+                    self.bg_rect = RoundedRectangle(radius=[24], pos=self.pos, size=self.size)
+                self.bind(pos=self._update_bg, size=self._update_bg)
             def _update_bg(self, *args):
                 self.bg_rect.pos = self.pos
                 self.bg_rect.size = self.size
-        self.text_input = RoundedInput(size_hint=(0.8, 1), multiline=False)
-        class RoundedButton(Button):
+        self.text_input = ModernInput(size_hint=(0.8, 1), multiline=False)
+        from kivy.animation import Animation
+        class ModernButton(Button):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
                 self.background_normal = ''
-                self.background_color = (0.2, 0.6, 0.2, 1)
+                self.background_color = (33/255, 194/255, 94/255, 1)
                 self.color = (1, 1, 1, 1)
                 self.font_size = get_scaled(18)
-                with self.canvas.before:  # type: ignore
-                    Color(0.2, 0.6, 0.2, 1)
-                    self.bg_rect = RoundedRectangle(radius=[get_scaled(18)], pos=self.pos, size=self.size)
+                self.bold = True
+                with self.canvas.before:
+                    Color(33/255, 194/255, 94/255, 1)
+                    self.bg_rect = RoundedRectangle(radius=[24], pos=self.pos, size=self.size)
                 self.bind(pos=self._update_bg, size=self._update_bg)
-                self.bind(on_enter=lambda x: setattr(self, 'background_color', (0.3, 0.7, 0.3, 1)))  # type: ignore
-                self.bind(on_leave=lambda x: setattr(self, 'background_color', (0.2, 0.6, 0.2, 1)))  # type: ignore
+                self.bind(on_press=self.animate_press)
             def _update_bg(self, *args):
                 self.bg_rect.pos = self.pos
                 self.bg_rect.size = self.size
-        send_btn = RoundedButton(text='Send', size_hint=(0.2, 1))
-        send_btn.bind(on_release=self.send_message)  # type: ignore
+            def animate_press(self, *args):
+                anim = Animation(background_color=(27/255, 38/255, 59/255, 1), d=0.12) + Animation(background_color=(33/255, 194/255, 94/255, 1), d=0.18)
+                anim.start(self)
+        send_btn = ModernButton(text='🚀 Send', size_hint=(0.2, 1))
+        send_btn.bind(on_release=self.send_message)
         self.mic_btn = None  # Placeholder for mic button
         self.is_recording = False  # Track mic recording state
         input_bar.add_widget(self.text_input)
@@ -229,7 +254,7 @@ class ChatScreen(BoxLayout):
 
         # --- Footer (unchanged) ---
         footer = BoxLayout(size_hint=(1, 0.05), padding=[0, get_scaled(4), 0, get_scaled(4)])
-        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(0.2, 0.6, 0.2, 1))
+        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(33/255, 194/255, 94/255, 1))
         footer.add_widget(footer_label)
         self.add_widget(footer)
         # Initialize UserManager
@@ -305,14 +330,21 @@ class ChatScreen(BoxLayout):
     def set_input_image(self):
         self.input_dropdown.dismiss()
         self.text_input.disabled = True
-        # Open file chooser popup for image selection
+        # Open file chooser popup for image selection with animation
+        from kivy.animation import Animation
         filechooser = FileChooserIconView(filters=['*.png', '*.jpg', '*.jpeg', '*.bmp'], path='~')
-        popup = Popup(title='Select Image', content=filechooser, size_hint=(0.9, 0.9))
+        popup = Popup(title='Select Image', content=filechooser, size_hint=(0.9, 0.9), opacity=0)
+        def animate_open(*args):
+            Animation(opacity=1, d=0.35, t='out_quad').start(popup)
+        popup.bind(on_open=animate_open)
         def on_selection(instance, selection):
             if selection:
                 self.state['selected_image'] = selection[0]
-                popup.dismiss()
-                self.handle_image_input(selection[0])
+                Animation(opacity=0, d=0.25, t='out_quad').start(popup)
+                def close_popup(*_):
+                    popup.dismiss()
+                    self.handle_image_input(selection[0])
+                Animation(opacity=0, d=0.25, t='out_quad').bind(on_complete=close_popup)
         filechooser.bind(selection=on_selection)
         popup.open()
 
@@ -413,11 +445,15 @@ class ChatScreen(BoxLayout):
             option_layout = BoxLayout(orientation='vertical', size_hint_y=None)
             option_layout.bind(minimum_height=option_layout.setter('height'))
             for label, value in options:
-                btn = Button(text=label, size_hint_y=None, height=44)
+                btn = Button(text=f"{label}", size_hint_y=None, height=52, font_size=18, background_normal='', background_color=(33/255, 194/255, 94/255, 1), color=(1,1,1,1))
                 btn.bind(on_release=lambda btn, v=value: self.calendar_option_selected(v))
                 option_layout.add_widget(btn)
-            popup = Popup(title="Calendar Options", content=option_layout, size_hint=(0.7, 0.7))
+            from kivy.animation import Animation
+            popup = Popup(title="Calendar Options", content=option_layout, size_hint=(0.7, 0.7), opacity=0)
             self._calendar_popup = popup
+            def animate_open(*args):
+                Animation(opacity=1, d=0.35, t='out_quad').start(popup)
+            popup.bind(on_open=animate_open)
             popup.open()
         except Exception as e:
             logging.error(f"calendar_action error: {str(e)}")
