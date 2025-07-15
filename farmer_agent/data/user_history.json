@@ -1,3 +1,10 @@
 {
-  "deva": {}
+  "deva": {
+    "queries": [
+      {
+        "query": "tomato in summer in india, red soil",
+        "advisory": "Crop: tomato in summer in india\nRecommended Soil: N/A\nCurrent Soil: red soil\nSoil Notes: N/A\nMarket Price: N/A"
+      }
+    ]
+  }
 }

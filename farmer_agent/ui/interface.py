@@ -13,13 +13,31 @@ try:
     from advisory.advisor import get_crop_advice
     from data.faq import FAQ
     from data.weather import WeatherEstimator
-    from data.crop_calendar import CropCalendar
+    from data.crop_calendar import CropCalendar, Reminders
+    from nlp.stt import recognize_speech
+    from nlp.tts import speak, list_voices
+    from nlp.translate import OfflineTranslator
+    from nlp.plant_cv import PlantIdentifier
+    from utils.file_utils import load_json
+    from data.user_profile import UserManager
+    from data.analytics import Analytics
+    from utils.accessibility import Accessibility
 except Exception as e:
     print("Import error in interface.py:", e)
     get_crop_advice = None
     FAQ = None
     WeatherEstimator = None
     CropCalendar = None
+    Reminders = None
+    recognize_speech = None
+    speak = None
+    list_voices = None
+    OfflineTranslator = None
+    PlantIdentifier = None
+    load_json = None
+    UserManager = None
+    Analytics = None
+    Accessibility = None
 
 # --- Custom iOS-style Button ---
 class IOSButton(KivyButton):
@@ -62,19 +80,53 @@ class ChatScreen(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
 
+        # --- Chat history area ---
+        self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
+        self.chat_history.bind(minimum_height=self.chat_history.setter('height'))  # type: ignore
+        self.scroll = ScrollView(size_hint=(1, 0.73))
+        self.scroll.add_widget(self.chat_history)
+        self.add_widget(self.scroll)
+
+        # --- Input area ---
+        input_layout = BoxLayout(size_hint=(1, 0.15))
+        self.text_input = TextInput(size_hint=(0.8, 1), multiline=False)
+        send_btn = IOSButton(text='Send', size_hint=(0.2, 1))
+        send_btn.bind(on_press=self.send_message) # type: ignore
+        input_layout.add_widget(self.text_input)
+        input_layout.add_widget(send_btn)
+        self.add_widget(input_layout)
+
         # --- Feature Buttons (iOS style, horizontal) ---
         feature_layout = BoxLayout(size_hint=(1, 0.12), spacing=8, padding=[8, 8, 8, 0])
         self.feature_buttons = {
+            "Input": IOSButton(text="Input", on_press=self.input_action),
             "Advisory": IOSButton(text="Advisory", on_press=self.advisory_action),
+            "Calendar": IOSButton(text="Calendar", on_press=self.calendar_action),
             "FAQ": IOSButton(text="FAQ", on_press=self.faq_action),
             "Weather": IOSButton(text="Weather", on_press=self.weather_action),
-            "Calendar": IOSButton(text="Calendar", on_press=self.calendar_action),
             "Analytics": IOSButton(text="Analytics", on_press=self.analytics_action),
+            "TTS Voices": IOSButton(text="TTS Voices", on_press=self.tts_voices_action),
             "Exit": IOSButton(text="Exit", on_press=self.exit_action),
         }
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
         self.add_widget(feature_layout)
+    def input_action(self, instance):
+        self.add_bubble("Input Modes: 1. Voice 2. Text 3. Image", is_user=False)
+        self.awaiting_input_mode = True
+
+    def tts_voices_action(self, instance):
+        if list_voices:
+            import io
+            import contextlib
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                list_voices()
+            voices = buf.getvalue()
+            self.add_bubble("Available TTS Voices:", is_user=False)
+            self.add_bubble(voices, is_user=False)
+        else:
+            self.add_bubble("TTS Voices module not available.", is_user=False)
 
         # --- Chat history area ---
         self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
@@ -97,11 +149,19 @@ class ChatScreen(BoxLayout):
         self.awaiting_faq = False
         self.awaiting_weather = False
         self.awaiting_calendar = False
+        self.awaiting_input_mode = False
+        self.awaiting_text_input = False
+        self.awaiting_image_path = False
+        self.awaiting_add_reminder = False
+        self.awaiting_reminder_activity = False
+        self.awaiting_reminder_days = False
+        self.awaiting_analytics = False
 
     # --- Feature Actions ---
     def advisory_action(self, instance):
-        self.add_bubble("Please enter your crop and soil type (e.g., 'Advice for Tomato in Sandy Loam'):", is_user=False)
+        self.add_bubble("Please enter your crop name for advisory:", is_user=False)
         self.awaiting_advisory = True
+
 
     def faq_action(self, instance):
         if FAQ:
@@ -137,57 +197,137 @@ class ChatScreen(BoxLayout):
             return
         self.add_bubble(user_text, is_user=True)
         try:
-            if self.awaiting_advisory:
-                crop, soil = self.parse_crop_soil(user_text)
-                if crop:
-                    if get_crop_advice:
-                        advice = get_crop_advice(crop, soil)
-                        self.add_bubble(advice, is_user=False)
-                    else:
-                        self.add_bubble("Advisory module not available.", is_user=False)
+            if self.awaiting_input_mode:
+                mode = user_text.strip()
+                if mode == "1" and recognize_speech:
+                    text = recognize_speech()
+                    self.add_bubble(f"Recognized Text: {text}", is_user=False)
+                    if speak:
+                        speak(text)
+                elif mode == "2":
+                    self.add_bubble("Enter your request:", is_user=False)
+                    self.awaiting_text_input = True
+                elif mode == "3" and PlantIdentifier:
+                    self.add_bubble("Enter image path:", is_user=False)
+                    self.awaiting_image_path = True
                 else:
-                    self.add_bubble("Could not detect crop. Please try again.", is_user=False)
+                    self.add_bubble("Invalid input mode or module not available.", is_user=False)
+                self.awaiting_input_mode = False
+            elif self.awaiting_text_input:
+                text = user_text.strip()
+                self.add_bubble(f"Text: {text}", is_user=False)
+                if speak:
+                    speak(text)
+                self.awaiting_text_input = False
+            elif self.awaiting_image_path:
+                image_path = user_text.strip()
+                if PlantIdentifier:
+                    identifier = PlantIdentifier()
+                    result = identifier.identify(image_path)
+                    self.add_bubble(f"Plant Identification Result: {result}", is_user=False)
+                else:
+                    self.add_bubble("PlantIdentifier module not available.", is_user=False)
+                self.awaiting_image_path = False
+            elif self.awaiting_advisory:
+                if get_crop_advice:
+                    crop = user_text.strip()
+                    soil = ''  # Optionally prompt for soil in a second step
+                    advice = get_crop_advice(crop, soil if soil else None)
+                    self.add_bubble("Personalized Advisory:", is_user=False)
+                    import json
+                    self.add_bubble(json.dumps(advice, indent=2, ensure_ascii=False), is_user=False)
+                else:
+                    self.add_bubble("Advisory module not available.", is_user=False)
                 self.awaiting_advisory = False
-
             elif self.awaiting_faq:
                 if FAQ:
                     faq = FAQ()
                     results = faq.search(user_text)
-                    if results:
-                        for item in results:
-                            self.add_bubble(f"Q: {item['question']}\nA: {item['answer']}", is_user=False)
-                    else:
-                        self.add_bubble("No matching FAQ found.", is_user=False)
+                    self.add_bubble("FAQ Results:", is_user=False)
+                    import json
+                    self.add_bubble(json.dumps(results, indent=2, ensure_ascii=False), is_user=False)
                 else:
                     self.add_bubble("FAQ module not available.", is_user=False)
                 self.awaiting_faq = False
-
             elif self.awaiting_weather:
                 if WeatherEstimator:
                     estimator = WeatherEstimator()
-                    try:
-                        weather = estimator.estimate(user_text)
-                    except TypeError:
-                        weather = estimator.estimate()
-                    self.add_bubble(f"Weather Estimation:\n{weather}", is_user=False)
+                    season = user_text.strip()
+                    weather = estimator.estimate(season if season else None)
+                    self.add_bubble("Weather Estimation:", is_user=False)
+                    import json
+                    self.add_bubble(json.dumps(weather, indent=2, ensure_ascii=False), is_user=False)
                 else:
                     self.add_bubble("Weather module not available.", is_user=False)
                 self.awaiting_weather = False
-
             elif self.awaiting_calendar:
-                if CropCalendar:
+                if CropCalendar and Reminders:
                     calendar = CropCalendar()
-                    schedule = calendar.get_schedule(user_text)
-                    self.add_bubble(f"Crop Calendar for {user_text.title()}:\n{schedule}", is_user=False)
+                    crop = user_text.strip()
+                    self.last_calendar_crop = crop
+                    self.add_bubble("Crop Calendar:", is_user=False)
+                    import json
+                    self.add_bubble(json.dumps(calendar.get_schedule(crop), indent=2, ensure_ascii=False), is_user=False)
+                    reminders = Reminders()
+                    self.add_bubble("Reminders:", is_user=False)
+                    self.add_bubble(json.dumps(reminders.get_upcoming(), indent=2, ensure_ascii=False), is_user=False)
+                    self.add_bubble("Add reminder? (y/n):", is_user=False)
+                    self.awaiting_add_reminder = True
                 else:
-                    self.add_bubble("Calendar module not available.", is_user=False)
+                    self.add_bubble("Calendar or Reminders module not available.", is_user=False)
                 self.awaiting_calendar = False
-
+            elif self.awaiting_add_reminder:
+                answer = user_text.strip().lower()
+                if answer == 'y':
+                    self.add_bubble("Activity:", is_user=False)
+                    self.awaiting_reminder_activity = True
+                else:
+                    self.add_bubble("No reminder added.", is_user=False)
+                self.awaiting_add_reminder = False
+            elif self.awaiting_reminder_activity:
+                self.reminder_activity = user_text.strip()
+                self.add_bubble("Days from now:", is_user=False)
+                self.awaiting_reminder_days = True
+                self.awaiting_reminder_activity = False
+            elif self.awaiting_reminder_days:
+                try:
+                    days = int(user_text.strip())
+                    crop = getattr(self, 'last_calendar_crop', 'Unknown')
+                    if Reminders:
+                        reminders = Reminders()
+                        try:
+                            reminders.add_reminder(crop, self.reminder_activity, days)
+                            self.add_bubble("Reminder added.", is_user=False)
+                        except Exception as e:
+                            self.add_bubble(f"Error adding reminder: {str(e)}", is_user=False)
+                    else:
+                        self.add_bubble("Reminders module not available.", is_user=False)
+                except Exception as e:
+                    self.add_bubble(f"Error: {str(e)}", is_user=False)
+                self.awaiting_reminder_days = False
+            elif self.awaiting_analytics:
+                if Analytics:
+                    try:
+                        analytics = Analytics()
+                        username = user_text.strip()
+                        self.add_bubble("User Activity Summary:", is_user=False)
+                        import json
+                        self.add_bubble(json.dumps(analytics.user_activity_summary(username), indent=2, ensure_ascii=False), is_user=False)
+                        self.add_bubble("Crop Trends:", is_user=False)
+                        self.add_bubble(json.dumps(analytics.crop_trends(), indent=2, ensure_ascii=False), is_user=False)
+                    except Exception as e:
+                        self.add_bubble(f"Error in analytics: {str(e)}", is_user=False)
+                else:
+                    self.add_bubble("Analytics module not available.", is_user=False)
+                self.awaiting_analytics = False
             else:
-                agent_response = self.get_agent_response(user_text)
-                self.add_bubble(agent_response, is_user=False)
+                try:
+                    agent_response = self.get_agent_response(user_text)
+                    self.add_bubble(agent_response, is_user=False)
+                except Exception as e:
+                    self.add_bubble(f"Error: {str(e)}", is_user=False)
         except Exception as e:
-            self.add_bubble(f"Error: {str(e)}", is_user=False)
+            self.add_bubble(f"Critical error: {str(e)}", is_user=False)
         self.text_input.text = ''
 
     # --- Utility Methods ---

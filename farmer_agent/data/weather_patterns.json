@@ -1,0 +1,5 @@
+{
+  "summer": {"temperature": 35, "humidity": 40, "advice": "Irrigate crops frequently."},
+  "monsoon": {"temperature": 28, "humidity": 80, "advice": "Monitor for fungal diseases."},
+  "winter": {"temperature": 18, "humidity": 50, "advice": "Protect crops from frost."}
+}
