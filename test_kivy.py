@@ -15,9 +15,10 @@ from kivy.uix.popup import Popup
 from kivy.uix.spinner import Spinner
 from kivy.graphics import Color, RoundedRectangle
 from kivy.core.window import Window
-from kivy.core.text import LabelBase
 from kivy.resources import resource_find
 from kivy.clock import Clock
+from kivy.uix.dropdown import DropDown
+from kivy.uix.filechooser import FileChooserIconView
 
 # Configure logging
 logging.basicConfig(
@@ -26,15 +27,6 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s]: %(message)s',
     encoding='utf-8'
 )
-
-# Register DejaVuSans.ttf from C drive if available, else fallback to default
-dejavu_path = 'C:\Windows\Fonts\DejaVuSans.ttf'
-if os.path.isfile(dejavu_path):
-    LabelBase.register(name='DejaVuSans', fn_regular=dejavu_path)
-    default_font = 'DejaVuSans'
-else:
-    logging.warning('DejaVuSans.ttf not found at C:\DejaVuSans.ttf, using default font.')
-    default_font = None
 
 # Backend imports with error handling
 try:
@@ -66,8 +58,7 @@ class ChatBubble(BoxLayout):
             valign='top',
             color=(1, 1, 1, 1) if is_user else (0, 0, 0, 1),
             text_size=(Window.width * 0.7, None),
-            markup=True,
-            font_name='DejaVuSans'
+            markup=True
         )
         self.label.bind(texture_size=self._update_height)  # type: ignore
         self.timestamp_label = Label(
@@ -76,8 +67,7 @@ class ChatBubble(BoxLayout):
             font_size=12,
             color=(0.5, 0.5, 0.5, 1),
             halign='right',
-            valign='bottom',
-            font_name='DejaVuSans'
+            valign='bottom'
         )
         self.add_widget(self.label)
         self.add_widget(self.timestamp_label)
@@ -119,12 +109,46 @@ class ChatScreen(BoxLayout):
         self.state = {"mode": None, "context": {}}
         def get_scaled(val):
             return int(val * Window.width / 800)
-        # Header
-        header = BoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
-        header_label = Label(text='Farmer AI Agent', font_size=get_scaled(28), bold=True, color=(0.2, 0.6, 0.2, 1), font_name='DejaVuSans')
-        header.add_widget(header_label)
-        self.add_widget(header)
-        # Chat history area
+
+        # --- Top bar with app title and language dropdown ---
+        top_bar = BoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
+        header_label = Label(text='Farmer AI Agent', font_size=get_scaled(28), bold=True, color=(0.2, 0.6, 0.2, 1))
+        # Language dropdown
+        self.language_dropdown = DropDown()
+        self.language_options = [
+            ("English", "en"), ("Hindi", "hi"), ("Tamil", "ta"), ("Telugu", "te"), ("Kannada", "kn"), ("Malayalam", "ml")
+        ]
+        self.language_btn = Button(text="🌐 Language", size_hint=(None, 1), width=160)
+        for lang_name, lang_code in self.language_options:
+            btn = Button(text=lang_name, size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn, code=lang_code: self.set_language(code))
+            self.language_dropdown.add_widget(btn)
+        self.language_btn.bind(on_release=self.language_dropdown.open)
+        top_bar.add_widget(header_label)
+        top_bar.add_widget(self.language_btn)
+        self.add_widget(top_bar)
+
+        # --- Mode dropdown (Advisory, Calendar, FAQ, Weather, Translate, Analytics) ---
+        mode_bar = BoxLayout(size_hint=(1, 0.08), padding=[get_scaled(16), 0, get_scaled(16), 0])
+        self.mode_dropdown = DropDown()
+        self.mode_options = [
+            ("Advisory", self.advisory_action),
+            ("Calendar", self.calendar_action),
+            ("FAQ", self.faq_action),
+            ("Weather", self.weather_action),
+            ("Translate", self.translate_action),
+            ("Analytics", self.analytics_action)
+        ]
+        self.mode_btn = Button(text="Select Mode", size_hint=(None, 1), width=180)
+        for mode_name, mode_func in self.mode_options:
+            btn = Button(text=mode_name, size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn, func=mode_func: self.select_mode(func))
+            self.mode_dropdown.add_widget(btn)
+        self.mode_btn.bind(on_release=self.mode_dropdown.open)
+        mode_bar.add_widget(self.mode_btn)
+        self.add_widget(mode_bar)
+
+        # --- Chat history area (unchanged) ---
         chat_area = BoxLayout(size_hint=(1, 0.62), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
         self.chat_history = GridLayout(cols=1, spacing=get_scaled(14), size_hint_y=None)
         self.chat_history.bind(minimum_height=self.chat_history.setter('height'))  # type: ignore
@@ -145,8 +169,21 @@ class ChatScreen(BoxLayout):
                 self.rect.pos = self.pos
                 self.rect.size = (self.width, 2)
         self.add_widget(Divider())
-        # Input area
-        input_layout = BoxLayout(size_hint=(1, 0.12), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)], spacing=get_scaled(12))
+        # --- Input dropdown (Text, Image) ---
+        input_bar = BoxLayout(size_hint=(1, 0.12), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)], spacing=get_scaled(12))
+        self.input_dropdown = DropDown()
+        self.input_options = [
+            ("Text", self.set_input_text),
+            ("Image", self.set_input_image)
+        ]
+        self.input_btn = Button(text="Input Type", size_hint=(None, 1), width=140)
+        for input_name, input_func in self.input_options:
+            btn = Button(text=input_name, size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn, func=input_func: func())
+            self.input_dropdown.add_widget(btn)
+        self.input_btn.bind(on_release=self.input_dropdown.open)
+        input_bar.add_widget(self.input_btn)
+        # Add text input and send button as before
         class RoundedInput(TextInput):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
@@ -154,7 +191,6 @@ class ChatScreen(BoxLayout):
                 self.hint_text = 'Type your message...'
                 self.font_size = get_scaled(18)
                 self.padding = [get_scaled(16), get_scaled(12), get_scaled(16), get_scaled(12)]
-                self.font_name = 'DejaVuSans'
                 self.foreground_color = (0, 0, 0, 1)  # Black text for visibility
                 with self.canvas.before:  # type: ignore
                     Color(0.95, 0.95, 0.95, 1)
@@ -171,7 +207,6 @@ class ChatScreen(BoxLayout):
                 self.background_color = (0.2, 0.6, 0.2, 1)
                 self.color = (1, 1, 1, 1)
                 self.font_size = get_scaled(18)
-                self.font_name = 'DejaVuSans'
                 with self.canvas.before:  # type: ignore
                     Color(0.2, 0.6, 0.2, 1)
                     self.bg_rect = RoundedRectangle(radius=[get_scaled(18)], pos=self.pos, size=self.size)
@@ -185,29 +220,16 @@ class ChatScreen(BoxLayout):
         send_btn.bind(on_release=self.send_message)  # type: ignore
         self.mic_btn = None  # Placeholder for mic button
         self.is_recording = False  # Track mic recording state
-        input_layout.add_widget(self.text_input)
-        input_layout.add_widget(send_btn)
-        self.add_widget(input_layout)
-        # Feature buttons
-        feature_layout = BoxLayout(size_hint=(1, 0.18), spacing=get_scaled(10), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
-        self.feature_buttons = {
-            "Input": RoundedButton(text="🎤 Input", on_press=self.input_action, font_name='DejaVuSans'),
-            "Advisory": RoundedButton(text="🌱 Advisory", on_press=self.advisory_action, font_name='DejaVuSans'),
-            "Calendar": RoundedButton(text="📅 Calendar", on_press=self.calendar_action, font_name='DejaVuSans'),
-            "FAQ": RoundedButton(text="❓ FAQ", on_press=self.faq_action, font_name='DejaVuSans'),
-            "Weather": RoundedButton(text="☀️ Weather", on_press=self.weather_action, font_name='DejaVuSans'),
-            "Translate": RoundedButton(text="🌐 Translate", on_press=self.translate_action, font_name='DejaVuSans'),
-            "Analytics": RoundedButton(text="📊 Analytics", on_press=self.analytics_action, font_name='DejaVuSans'),
-            "TTS Voices": RoundedButton(text="🔊 TTS Voices", on_press=self.tts_voices_action, font_name='DejaVuSans'),
-            "Clear History": RoundedButton(text="🧹 Clear History", on_press=self.clear_history_action, font_name='DejaVuSans'),
-            "Exit": RoundedButton(text="🚪 Exit", on_press=self.exit_action, font_name='DejaVuSans')
-        }
-        for btn in self.feature_buttons.values():
-            feature_layout.add_widget(btn)
-        self.add_widget(feature_layout)
-        # Footer
+        input_bar.add_widget(self.text_input)
+        input_bar.add_widget(send_btn)
+        self.add_widget(input_bar)
+
+        # --- Remove old feature buttons bar ---
+        # ...existing code...
+
+        # --- Footer (unchanged) ---
         footer = BoxLayout(size_hint=(1, 0.05), padding=[0, get_scaled(4), 0, get_scaled(4)])
-        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(0.2, 0.6, 0.2, 1), font_name='DejaVuSans')
+        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(0.2, 0.6, 0.2, 1))
         footer.add_widget(footer_label)
         self.add_widget(footer)
         # Initialize UserManager
@@ -269,6 +291,41 @@ class ChatScreen(BoxLayout):
         except Exception as e:
             logging.error(f"add_bubble error: {str(e)}")
             self.add_bubble(f"Error displaying message: {str(e)}", is_user=False)
+
+    def select_mode(self, func):
+        self.mode_dropdown.dismiss()
+        func(None)
+
+    def set_input_text(self):
+        self.input_dropdown.dismiss()
+        self.text_input.disabled = False
+        self.text_input.text = ''
+        self.state['input_type'] = 'text'
+
+    def set_input_image(self):
+        self.input_dropdown.dismiss()
+        self.text_input.disabled = True
+        # Open file chooser popup for image selection
+        filechooser = FileChooserIconView(filters=['*.png', '*.jpg', '*.jpeg', '*.bmp'], path='~')
+        popup = Popup(title='Select Image', content=filechooser, size_hint=(0.9, 0.9))
+        def on_selection(instance, selection):
+            if selection:
+                self.state['selected_image'] = selection[0]
+                popup.dismiss()
+                self.handle_image_input(selection[0])
+        filechooser.bind(selection=on_selection)
+        popup.open()
+
+    def handle_image_input(self, image_path):
+        # This function should handle image input for the current mode
+        self.add_bubble(f"Image selected: {image_path}", is_user=True)
+        # You can add logic to process the image as per the selected mode
+
+    def set_language(self, lang_code):
+        self.language_dropdown.dismiss()
+        self.state['language'] = lang_code
+        # TODO: Call translate function for UI, responses, and speech
+        self.add_bubble(f"Language set to: {lang_code}", is_user=False)
 
     def input_action(self, instance):
         if recognize_speech:
@@ -646,7 +703,7 @@ class ChatScreen(BoxLayout):
                         self.state["context"]["input_type"] = "mic"
                         # Add mic button if not present
                         if not self.mic_btn:
-                            self.mic_btn = Button(text="🎤 Mic", size_hint=(None, None), size=(60, 44), font_name='DejaVuSans', background_color=(0.2, 0.6, 0.2, 1), color=(1, 1, 1, 1))
+                            self.mic_btn = Button(text="🎤 Mic", size_hint=(None, None), size=(60, 44), background_color=(0.2, 0.6, 0.2, 1), color=(1, 1, 1, 1))
                             self.mic_btn.bind(on_release=self.start_mic_recording)
                             self.add_widget(self.mic_btn)
                     else:
