@@ -3,55 +3,31 @@
 import os
 import sys
 
-class STT:
-    def __init__(self, engine="vosk", model_path=None, whisper_model="base"):
-        self.engine = engine
-        self.model_path = model_path or os.path.join(os.path.dirname(__file__), "model")
-        self.whisper_model = whisper_model
-        self._vosk_model = None
-        self._whisper_model = None
 
-    def recognize_speech(self, duration=5, lang="en"):
+# Whisper-only STT for all Indian regional languages
+import tempfile
+import wave
+
+class STT:
+    def __init__(self, whisper_model="base"):
         """
-        Records audio from the microphone and returns recognized text (offline, Vosk).
+        Whisper model name ("base", "small", "medium", "large", etc.).
+        Whisper supports all major Indian languages (see https://github.com/openai/whisper#available-models-and-languages).
         """
-        try:
-            from vosk import Model, KaldiRecognizer
-            import pyaudio
-        except ImportError:
-            print("Please install vosk and pyaudio: pip install vosk pyaudio")
-            return ""
-        if not os.path.exists(self.model_path):
-            print(f"Vosk model not found at {self.model_path}. Download and place the model folder here.")
-            return ""
-        if not self._vosk_model:
-            self._vosk_model = Model(self.model_path)
-        rec = KaldiRecognizer(self._vosk_model, 16000)
-        p = pyaudio.PyAudio()
-        stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
-        stream.start_stream()
-        print("Speak now...")
-        result = ""
-        for _ in range(int(16000 / 8000 * duration)):
-            data = stream.read(4000, exception_on_overflow=False)
-            if rec.AcceptWaveform(data):
-                import json
-                res = rec.Result()
-                result = json.loads(res).get('text', '')
-                break
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-        return result
+        self.whisper_model = whisper_model
+        self._whisper_model = None
 
     def transcribe_audio(self, file_path: str, language: str = "auto") -> str:
         """
         Transcribe an audio file using Whisper (multi-language, file-based).
+        For Indian languages, set language to ISO code (e.g., 'hi', 'ta', 'te', 'kn', 'ml', etc.).
         """
         try:
             import whisper
         except ImportError:
             return "[Error] Please install openai-whisper: pip install openai-whisper"
+        if not file_path:
+            return "[Error] No audio file provided."
         if not self._whisper_model:
             self._whisper_model = whisper.load_model(self.whisper_model)
         try:
@@ -63,37 +39,77 @@ class STT:
         except Exception as e:
             return f"[Error] {str(e)}"
 
-    def recognize(self, source="mic", **kwargs):
+    def record_from_mic(self, duration=5, output_path=None):
         """
-        Unified interface: source="mic" (vosk) or source="file" (whisper)
+        Records audio from the microphone and saves to output_path (WAV, 16kHz mono). Returns the file path.
+        """
+        try:
+            import pyaudio
+        except ImportError:
+            return "[Error] Please install pyaudio: pip install pyaudio"
+        CHUNK = 1024
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 16000
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        print(f"Recording from mic for {duration} seconds...")
+        frames = []
+        for _ in range(0, int(RATE / CHUNK * duration)):
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            frames.append(data)
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        if not output_path:
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+            output_path = tmp.name
+            tmp.close()
+        wf = wave.open(output_path, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+        return output_path
+
+    def recognize(self, source="file", language: str = "auto", duration=5, file_path: str = "") -> str:
+        """
+        Unified interface: source="mic" or "file". If mic, records then transcribes with Whisper.
         """
         if source == "mic":
-            return self.recognize_speech(**kwargs)
-        elif source == "file":
-            return self.transcribe_audio(kwargs.get("file_path", ""), language=kwargs.get("language", "auto"))
+            audio_path = self.record_from_mic(duration=duration)
+            if isinstance(audio_path, str) and audio_path.endswith('.wav'):
+                return self.transcribe_audio(audio_path, language=language)
+            else:
+                return audio_path if isinstance(audio_path, str) else "[Error] Mic recording failed."
+        elif source == "file" and file_path:
+            return self.transcribe_audio(file_path, language=language)
         else:
-            return "[Error] Unknown source. Use 'mic' or 'file'."
+            return "[Error] Please provide a valid source ('mic' or 'file') and file_path if using file."
 
-def recognize_speech(duration=5, lang="en", engine="vosk", file_path=None):
+
+def recognize_speech(source="file", lang: str = "auto", whisper_model: str = "base", duration=5, file_path: str = ""):
     """
-    Unified function for CLI/UI: use Vosk for mic, Whisper for file.
+    Unified function for CLI/UI: uses Whisper for all Indian languages. Supports mic or file.
     """
-    stt = STT(engine=engine)
-    if file_path:
-        return stt.transcribe_audio(file_path, language=lang)
-    else:
-        return stt.recognize_speech(duration=duration, lang=lang)
+    stt = STT(whisper_model=whisper_model)
+    return stt.recognize(source=source, language=lang, duration=duration, file_path=file_path or "")
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Speech-to-Text Demo (Vosk/Whisper)")
-    parser.add_argument('--file', type=str, help='Audio file to transcribe (uses Whisper)')
-    parser.add_argument('--lang', type=str, default='en', help='Language code (default: en)')
-    parser.add_argument('--duration', type=int, default=5, help='Mic record duration (seconds, Vosk)')
+    parser = argparse.ArgumentParser(description="Speech-to-Text Demo (Whisper only, all Indian languages)")
+    parser.add_argument('--file', type=str, help='Audio file to transcribe (if not using mic)')
+    parser.add_argument('--lang', type=str, default='auto', help='Language code (default: auto)')
+    parser.add_argument('--model', type=str, default='base', help='Whisper model (base/small/medium/large)')
+    parser.add_argument('--mic', action='store_true', help='Record from mic instead of file')
+    parser.add_argument('--duration', type=int, default=5, help='Mic record duration (seconds)')
     args = parser.parse_args()
-    if args.file:
+    if args.mic:
+        print("Recording from mic and transcribing with Whisper...")
+        print("Recognized:", recognize_speech(source="mic", lang=args.lang, whisper_model=args.model, duration=args.duration))
+    elif args.file:
         print("Transcribing file with Whisper...")
-        print("Recognized:", recognize_speech(file_path=args.file, lang=args.lang, engine="whisper"))
+        print("Recognized:", recognize_speech(source="file", file_path=args.file, lang=args.lang, whisper_model=args.model))
     else:
-        print("Recording from mic with Vosk...")
-        print("Recognized:", recognize_speech(duration=args.duration, lang=args.lang, engine="vosk"))
+        print("Please provide either --mic or --file.")

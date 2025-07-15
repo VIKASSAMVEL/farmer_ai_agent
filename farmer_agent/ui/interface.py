@@ -157,7 +157,36 @@ class ChatScreen(BoxLayout):
 
     def input_action(self, instance):
         self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
+        # Add a mic button for STT
+        if not hasattr(self, 'mic_button'):
+            from kivy.uix.button import Button
+            self.mic_button = Button(text="🎤 Start Recording", size_hint=(None, None), size=(180, 50))
+            self.mic_button.bind(on_press=self.toggle_mic_recording)
+            self.add_widget(self.mic_button)
         self.awaiting_input_mode = True
+
+    def toggle_mic_recording(self, instance):
+        if not hasattr(self, '_is_recording') or not self._is_recording:
+            self._is_recording = True
+            self.mic_button.text = "⏹️ Stop Recording"
+            self.add_bubble("Recording... Press the mic button again to stop.", is_user=False)
+            import threading
+            self._stop_flag = False
+            def stop_callback():
+                return self._stop_flag
+            def record_and_transcribe():
+                from nlp.stt import recognize_speech
+                result = recognize_speech(source="mic", stop_callback=stop_callback)
+                self.add_bubble(f"Recognized Text: {result['text']}", is_user=False)
+                if result['language']:
+                    self.add_bubble(f"Detected Language: {result['language']}", is_user=False)
+                self._is_recording = False
+                self.mic_button.text = "🎤 Start Recording"
+            self._record_thread = threading.Thread(target=record_and_transcribe)
+            self._record_thread.start()
+        else:
+            self._stop_flag = True
+            self.mic_button.text = "🎤 Start Recording"
 
     def tts_voices_action(self, instance):
         if list_voices:
@@ -303,13 +332,7 @@ class ChatScreen(BoxLayout):
                     self.add_bubble("Invalid input mode or module not available.", is_user=False)
                 self.awaiting_input_mode = False
             elif hasattr(self, 'awaiting_stt_lang') and self.awaiting_stt_lang == "mic":
-                lang = user_text.strip() or "en"
-                from nlp.stt import STT
-                stt = STT(engine="vosk")
-                text = stt.recognize_speech(lang=lang)
-                self.add_bubble(f"Recognized Text: {text}", is_user=False)
-                if speak:
-                    speak(text)
+                self.add_bubble("Please use the mic button below to start and stop recording.", is_user=False)
                 self.awaiting_stt_lang = False
             elif hasattr(self, 'awaiting_audio_file') and self.awaiting_audio_file:
                 file_path = user_text.strip()

@@ -1,5 +1,12 @@
 {
-  "summer": {"temperature": 35, "humidity": 40, "advice": "Irrigate crops frequently."},
-  "monsoon": {"temperature": 28, "humidity": 80, "advice": "Monitor for fungal diseases."},
-  "winter": {"temperature": 18, "humidity": 50, "advice": "Protect crops from frost."}
+  "summer": {"temperature": 35, "humidity": 40, "rainfall": 50, "advice": "Irrigate crops frequently. Mulch to conserve soil moisture."},
+  "pre-monsoon": {"temperature": 38, "humidity": 30, "rainfall": 20, "advice": "Prepare fields for sowing. Watch for heat stress in seedlings."},
+  "monsoon": {"temperature": 28, "humidity": 80, "rainfall": 300, "advice": "Monitor for fungal diseases. Ensure proper drainage."},
+  "post-monsoon": {"temperature": 26, "humidity": 65, "rainfall": 60, "advice": "Ideal for sowing rabi crops. Reduce irrigation frequency."},
+  "winter": {"temperature": 18, "humidity": 50, "rainfall": 10, "advice": "Protect crops from frost. Use row covers for vegetables."},
+  "spring": {"temperature": 24, "humidity": 55, "rainfall": 30, "advice": "Favorable for flowering and fruit set. Apply balanced fertilizer."},
+  "heatwave": {"temperature": 44, "humidity": 20, "rainfall": 0, "advice": "Provide shade and frequent irrigation. Avoid pesticide sprays during peak heat."},
+  "coldwave": {"temperature": 6, "humidity": 60, "rainfall": 5, "advice": "Irrigate lightly to reduce frost risk. Harvest mature crops early."},
+  "cyclone": {"temperature": 27, "humidity": 90, "rainfall": 400, "advice": "Secure greenhouses. Drain excess water from fields."},
+  "drought": {"temperature": 39, "humidity": 15, "rainfall": 0, "advice": "Use drought-tolerant varieties. Practice mulching and water harvesting."}
 }
