@@ -110,11 +110,27 @@ class ChatScreen(BoxLayout):
             "TTS Voices": IOSButton(text="TTS Voices", on_press=self.tts_voices_action),
             "Exit": IOSButton(text="Exit", on_press=self.exit_action),
         }
+            "Translate": IOSButton(text="Translate", on_press=self.translate_action),
+    def translate_action(self, instance):
+        self.add_bubble("Enter text to translate:", is_user=False)
+        self.awaiting_translate_text = True
+            elif hasattr(self, 'awaiting_translate_text') and self.awaiting_translate_text:
+                self._translate_text = user_text.strip()
+                self.add_bubble("Enter target language code (e.g., hi for Hindi):", is_user=False)
+                self.awaiting_translate_lang = True
+                self.awaiting_translate_text = False
+            elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
+                tgt_lang = user_text.strip() or "hi"
+                from nlp.translate import OfflineTranslator
+                translator = OfflineTranslator()
+                translated = translator.translate(self._translate_text)
+                self.add_bubble(f"Translation: {translated}", is_user=False)
+                self.awaiting_translate_lang = False
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
         self.add_widget(feature_layout)
     def input_action(self, instance):
-        self.add_bubble("Input Modes: 1. Voice 2. Text 3. Image", is_user=False)
+        self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
         self.awaiting_input_mode = True
 
     def tts_voices_action(self, instance):
@@ -227,22 +243,59 @@ class ChatScreen(BoxLayout):
             return
         self.add_bubble(user_text, is_user=True)
         try:
-            if self.awaiting_input_mode:
+            if hasattr(self, 'awaiting_translate_text') and self.awaiting_translate_text:
+                self._translate_text = user_text.strip()
+                self.add_bubble("Enter target language code (e.g., hi for Hindi):", is_user=False)
+                self.awaiting_translate_lang = True
+                self.awaiting_translate_text = False
+            elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
+                tgt_lang = user_text.strip() or "hi"
+                from nlp.translate import OfflineTranslator
+                translator = OfflineTranslator()
+                translated = translator.translate(self._translate_text)
+                self.add_bubble(f"Translation: {translated}", is_user=False)
+                self.awaiting_translate_lang = False
+            elif self.awaiting_input_mode:
                 mode = user_text.strip()
                 if mode == "1" and recognize_speech:
-                    text = recognize_speech()
-                    self.add_bubble(f"Recognized Text: {text}", is_user=False)
-                    if speak:
-                        speak(text)
+                    self.add_bubble("Language code (default: en):", is_user=False)
+                    self.awaiting_stt_lang = "mic"
                 elif mode == "2":
+                    self.add_bubble("Enter audio file path:", is_user=False)
+                    self.awaiting_audio_file = True
+                elif mode == "3":
                     self.add_bubble("Enter your request:", is_user=False)
                     self.awaiting_text_input = True
-                elif mode == "3" and PlantIdentifier:
+                elif mode == "4" and PlantIdentifier:
                     self.add_bubble("Enter image path:", is_user=False)
                     self.awaiting_image_path = True
                 else:
                     self.add_bubble("Invalid input mode or module not available.", is_user=False)
                 self.awaiting_input_mode = False
+            elif hasattr(self, 'awaiting_stt_lang') and self.awaiting_stt_lang == "mic":
+                lang = user_text.strip() or "en"
+                from nlp.stt import STT
+                stt = STT(engine="vosk")
+                text = stt.recognize_speech(lang=lang)
+                self.add_bubble(f"Recognized Text: {text}", is_user=False)
+                if speak:
+                    speak(text)
+                self.awaiting_stt_lang = False
+            elif hasattr(self, 'awaiting_audio_file') and self.awaiting_audio_file:
+                file_path = user_text.strip()
+                self.add_bubble("Language code (default: auto):", is_user=False)
+                self._audio_file_path = file_path
+                self.awaiting_audio_file_lang = True
+                self.awaiting_audio_file = False
+            elif hasattr(self, 'awaiting_audio_file_lang') and self.awaiting_audio_file_lang:
+                lang = user_text.strip() or "auto"
+                from nlp.stt import STT
+                stt = STT(engine="whisper")
+                text = stt.transcribe_audio(self._audio_file_path, language=lang)
+                self.add_bubble(f"Transcribed Text: {text}", is_user=False)
+                if speak:
+                    speak(text)
+                self.awaiting_audio_file_lang = False
             elif self.awaiting_text_input:
                 text = user_text.strip()
                 self.add_bubble(f"Text: {text}", is_user=False)

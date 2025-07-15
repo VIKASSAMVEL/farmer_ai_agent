@@ -1,2 +1,17 @@
+
+# Core STT dependencies
 vosk
+pyaudio
+openai-whisper
+
+# Kivy UI
+kivy
+
+# General dependencies
 sounddevice
+requests
+transformers
+
+# Optional (for analytics, FAQ, etc.)
+fuzzywuzzy
+python-Levenshtein

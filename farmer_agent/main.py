@@ -51,17 +51,28 @@ def main():
         choice = input("Enter choice: ").strip()
 
         if choice == "1":
-            print("Input Modes: 1. Voice 2. Text 3. Image")
+            print("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image")
             mode = input("Select mode: ").strip()
             if mode == "1":
-                text = recognize_speech()
+                lang = input("Language code (default: en): ").strip() or "en"
+                from nlp.stt import STT
+                stt = STT(engine="vosk")
+                text = stt.recognize_speech(lang=lang)
                 print(acc.apply_contrast(f"Recognized Text: {text}"))
                 acc.speak_text(text)
             elif mode == "2":
+                file_path = input("Enter audio file path: ").strip()
+                lang = input("Language code (default: auto): ").strip() or "auto"
+                from nlp.stt import STT
+                stt = STT(engine="whisper")
+                text = stt.transcribe_audio(file_path, language=lang)
+                print(acc.apply_contrast(f"Transcribed Text: {text}"))
+                acc.speak_text(text)
+            elif mode == "3":
                 text = input("Enter your request: ")
                 print(acc.apply_contrast(f"Text: {text}"))
                 acc.speak_text(text)
-            elif mode == "3":
+            elif mode == "4":
                 image_path = input("Enter image path: ")
                 identifier = PlantIdentifier()
                 result = identifier.identify(image_path)
