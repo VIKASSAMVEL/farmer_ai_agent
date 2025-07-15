@@ -123,31 +123,42 @@ class ChatScreen(MDBoxLayout):
         self.canvas.before.add(self.bg_rect)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-    def _update_bg(self, *args):
-        if hasattr(self, 'bg_rect'):
-            self.bg_rect.pos = self.pos
-            self.bg_rect.size = self.size
-
-        # --- Mode dropdown (Advisory, Calendar, FAQ, Weather, Translate, Analytics) ---
-        mode_bar = MDBoxLayout(size_hint=(1, 0.08), padding=[ChatScreen.get_scaled(16), 0, ChatScreen.get_scaled(16), 0])
-        self.mode_btn = MDRaisedButton(text="Select Mode", size_hint=(None, 1), width=180, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=ChatScreen.get_scaled(18))
-        self.mode_options = [
-            {"text": "Advisory", "on_release": lambda x=None: self.select_mode(self.advisory_action)},
-            {"text": "Calendar", "on_release": lambda x=None: self.select_mode(self.calendar_action)},
-            {"text": "FAQ", "on_release": lambda x=None: self.select_mode(self.faq_action)},
-            {"text": "Weather", "on_release": lambda x=None: self.select_mode(self.weather_action)},
-            {"text": "Translate", "on_release": lambda x=None: self.select_mode(self.translate_action)},
-            {"text": "Analytics", "on_release": lambda x=None: self.select_mode(self.analytics_action)}
-        ]
+        # --- Mode bar ---
+        mode_bar = MDBoxLayout(size_hint=(1, 0.09), padding=[ChatScreen.get_scaled(16), ChatScreen.get_scaled(8), ChatScreen.get_scaled(16), ChatScreen.get_scaled(8)], spacing=ChatScreen.get_scaled(16))
+        self.mode_btn = MDRaisedButton(text="Select Mode", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=ChatScreen.get_scaled(18))
         self.mode_menu = MDDropdownMenu(
-            caller=self.mode_btn,
-            items=self.mode_options
+            caller=None,
+            items=[
+                {"text": "Input", "on_release": lambda: self.input_action(None)},
+                {"text": "Advisory", "on_release": lambda: self.advisory_action(None)},
+                {"text": "Calendar", "on_release": lambda: self.calendar_action(None)},
+                {"text": "FAQ", "on_release": lambda: self.faq_action(None)},
+                {"text": "Weather", "on_release": lambda: self.weather_action(None)},
+                {"text": "Translate", "on_release": lambda: self.translate_action(None)},
+                {"text": "Analytics", "on_release": lambda: self.analytics_action(None)},
+                {"text": "TTS Voices", "on_release": lambda: self.tts_voices_action(None)},
+                {"text": "Clear History", "on_release": lambda: self.clear_history_action(None)},
+                {"text": "Exit", "on_release": lambda: self.exit_action(None)},
+            ]
         )
+        self.mode_menu.caller = self.mode_btn
         self.mode_btn.bind(on_release=lambda x: self.mode_menu.open())
         mode_bar.add_widget(self.mode_btn)
+        self.language_btn = MDRaisedButton(text="🌐 Language", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=ChatScreen.get_scaled(18))
+        self.language_dropdown = MDDropdownMenu(
+            caller=None,
+            items=[
+                {"text": "English", "on_release": lambda: self.set_language('en')},
+                {"text": "தமிழ்", "on_release": lambda: self.set_language('ta')},
+                # Add more languages as needed
+            ]
+        )
+        self.language_dropdown.caller = self.language_btn
+        self.language_btn.bind(on_release=lambda x: self.language_dropdown.open())
+        mode_bar.add_widget(self.language_btn)
         self.add_widget(mode_bar)
 
-        # --- Chat history area (unchanged) ---
+        # --- Chat history area ---
         chat_area = MDBoxLayout(size_hint=(1, 0.62), padding=[ChatScreen.get_scaled(16), ChatScreen.get_scaled(8), ChatScreen.get_scaled(16), ChatScreen.get_scaled(8)])
         self.chat_history = MDGridLayout(cols=1, spacing=ChatScreen.get_scaled(14), size_hint_y=None)
         self.chat_history.bind(minimum_height=self.chat_history.setter('height'))  # type: ignore
@@ -155,7 +166,8 @@ class ChatScreen(MDBoxLayout):
         self.scroll.add_widget(self.chat_history)
         chat_area.add_widget(self.scroll)
         self.add_widget(chat_area)
-        # Divider
+
+        # --- Divider ---
         class Divider(MDBoxLayout):
             def __init__(self, **kwargs):
                 super().__init__(size_hint=(1, None), height=2, **kwargs)
@@ -168,12 +180,14 @@ class ChatScreen(MDBoxLayout):
                 self.rect.pos = self.pos
                 self.rect.size = (self.width, 2)
         self.add_widget(Divider())
-        # Define input options for input type dropdown
+
+        # --- Input options for input type dropdown ---
         self.input_options = [
             ("Text", self.set_input_text),
             ("Image", self.set_input_image)
         ]
-        # --- Input dropdown (Text, Image) ---
+
+        # --- Input bar (dropdown, text input, send button) ---
         input_bar = MDBoxLayout(size_hint=(1, 0.12), padding=[ChatScreen.get_scaled(16), ChatScreen.get_scaled(8), ChatScreen.get_scaled(16), ChatScreen.get_scaled(8)], spacing=ChatScreen.get_scaled(16))
         self.input_btn = MDRaisedButton(text="📝 Input Type", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=ChatScreen.get_scaled(18))
         self.input_menu = MDDropdownMenu(
@@ -183,7 +197,7 @@ class ChatScreen(MDBoxLayout):
         self.input_menu.caller = self.input_btn
         self.input_btn.bind(on_release=lambda x: self.input_menu.open())
         input_bar.add_widget(self.input_btn)
-        # Add text input and send button as before
+
         class ModernInput(MDTextField):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
@@ -195,13 +209,11 @@ class ChatScreen(MDBoxLayout):
                 self.font_size = ChatScreen.get_scaled(18)
                 self.padding = [ChatScreen.get_scaled(16), ChatScreen.get_scaled(12), ChatScreen.get_scaled(16), ChatScreen.get_scaled(12)]
                 self.radius = [16]
-                # Set foreground color to high-contrast white for visibility
                 self.foreground_color = (1, 1, 1, 1)
                 self.cursor_color = (1, 1, 1, 1)
                 self.hint_text_color = (0.8, 0.95, 0.8, 1)
         self.text_input = ModernInput(size_hint=(0.8, 1), multiline=False)
-        from kivy.animation import Animation
-        # ModernButton without HoverBehavior
+
         from kivy.uix.behaviors import ButtonBehavior
         class ModernButton(MDRaisedButton, ButtonBehavior):
             def __init__(self, **kwargs):
@@ -230,14 +242,12 @@ class ChatScreen(MDBoxLayout):
         input_bar.add_widget(send_btn)
         self.add_widget(input_bar)
 
-        # --- Remove old feature buttons bar ---
-        # ...existing code...
-
-        # --- Footer (unchanged) ---
+        # --- Footer ---
         footer = MDBoxLayout(size_hint=(1, 0.05), padding=[0, ChatScreen.get_scaled(4), 0, ChatScreen.get_scaled(4)])
         footer_label = MDLabel(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=ChatScreen.get_scaled(14), color=(0.8, 0.9, 1, 1))
         footer.add_widget(footer_label)
         self.add_widget(footer)
+
         # Initialize UserManager
         if load_env_local:
             try:
@@ -260,6 +270,13 @@ class ChatScreen(MDBoxLayout):
         except Exception as e:
             logging.error(f"UserManager init error: {str(e)}")
             self.add_bubble(f"User profile error: {str(e)}", is_user=False)
+
+    # Removed duplicate _update_bg and mode_bar references
+
+    def _update_bg(self, *args):
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
 
     def add_bubble(self, text, is_user=False):
         try:
