@@ -1,18 +1,207 @@
 [
   {
     "question": "How often should I water tomato plants?",
-    "answer": "Water tomato plants every 2-3 days, keeping the soil moist but not waterlogged."
+    "answer": "Water tomato plants every 2-3 days, keeping the soil moist but not waterlogged.",
+    "tags": ["tomato", "watering", "irrigation"]
   },
   {
     "question": "What is the best soil for rice cultivation?",
-    "answer": "Clay loam soil with good water retention is ideal for rice."
+    "answer": "Clay loam soil with good water retention is ideal for rice.",
+    "tags": ["rice", "soil", "cultivation"]
   },
   {
     "question": "How can I prevent leaf spot disease?",
-    "answer": "Use disease-free seeds, avoid overhead watering, and remove affected leaves promptly."
+    "answer": "Use disease-free seeds, avoid overhead watering, and remove affected leaves promptly.",
+    "tags": ["disease", "leaf spot", "prevention"]
   },
   {
     "question": "What are climate-smart practices for small farmers?",
-    "answer": "Use organic mulch, practice crop rotation, and adopt water-saving irrigation methods."
+    "answer": "Use organic mulch, practice crop rotation, and adopt water-saving irrigation methods.",
+    "tags": ["climate-smart", "sustainability", "small farmers"]
+  },
+  {
+    "question": "How do I control pests in organic farming?",
+    "answer": "Use neem oil spray, introduce beneficial insects, and practice crop rotation.",
+    "tags": ["pests", "organic", "control"]
+  },
+  {
+    "question": "When should I sow wheat in North India?",
+    "answer": "Sow wheat in North India from late October to mid-November for best yields.",
+    "tags": ["wheat", "sowing", "timing"]
+  },
+  {
+    "question": "How can I improve soil fertility naturally?",
+    "answer": "Add compost, use green manure, and rotate crops to improve soil fertility.",
+    "tags": ["soil", "fertility", "organic"]
+  },
+  {
+    "question": "What is the ideal temperature for growing potatoes?",
+    "answer": "Potatoes grow best at 15-20°C.",
+    "tags": ["potato", "temperature", "growing"]
+  },
+  {
+    "question": "How do I harvest and store onions?",
+    "answer": "Harvest onions when tops fall over, cure in shade, and store in a cool, dry place.",
+    "tags": ["onion", "harvest", "storage"]
+  },
+  {
+    "question": "What are the symptoms of nitrogen deficiency in crops?",
+    "answer": "Yellowing of older leaves and stunted growth are common symptoms of nitrogen deficiency.",
+    "tags": ["nutrient", "deficiency", "nitrogen"]
+  },
+  {
+    "question": "How can I conserve water in my field?",
+    "answer": "Use drip irrigation, mulching, and schedule watering in the early morning or late evening.",
+    "tags": ["water", "conservation", "irrigation"]
+  },
+  {
+    "question": "What is the best way to control weeds in paddy fields?",
+    "answer": "Practice timely manual weeding and use recommended herbicides if necessary.",
+    "tags": ["weeds", "paddy", "control"]
+  },
+  {
+    "question": "How do I test soil pH?",
+    "answer": "Use a soil pH meter or send a soil sample to a local agricultural lab.",
+    "tags": ["soil", "pH", "testing"]
+  },
+  {
+    "question": "What are the benefits of crop rotation?",
+    "answer": "Crop rotation improves soil health, reduces pest buildup, and increases yields.",
+    "tags": ["crop rotation", "benefits", "soil health"]
+  },
+  {
+    "question": "How can I protect crops from frost?",
+    "answer": "Cover crops with mulch or plastic sheets and irrigate before a frost event.",
+    "tags": ["frost", "protection", "crops"]
+  },
+  {
+    "question": "What is the recommended spacing for planting maize?",
+    "answer": "Plant maize at 60 cm between rows and 20 cm between plants.",
+    "tags": ["maize", "spacing", "planting"]
+  },
+  {
+    "question": "How do I identify and manage aphids?",
+    "answer": "Aphids are small green insects; control them with neem oil or insecticidal soap.",
+    "tags": ["aphids", "pests", "management"]
+  },
+  {
+    "question": "What are the signs of overwatering in crops?",
+    "answer": "Wilting, yellowing leaves, and root rot are signs of overwatering.",
+    "tags": ["overwatering", "signs", "crops"]
+  },
+  {
+    "question": "How can I increase pollination in cucurbits?",
+    "answer": "Encourage bees by planting flowers nearby and avoid spraying insecticides during bloom.",
+    "tags": ["pollination", "cucurbits", "bees"]
+  },
+  {
+    "question": "What is the best time to apply fertilizer?",
+    "answer": "Apply fertilizer at sowing and again during early growth stages for most crops.",
+    "tags": ["fertilizer", "timing", "application"]
+  },
+  {
+    "question": "How do I manage drought stress in crops?",
+    "answer": "Use drought-tolerant varieties, mulch, and irrigate efficiently to manage drought stress.",
+    "tags": ["drought", "stress", "management"]
+  },
+  {
+    "question": "How do I prevent blossom end rot in tomatoes?",
+    "answer": "Ensure consistent watering and provide adequate calcium to prevent blossom end rot in tomatoes.",
+    "tags": ["tomato", "blossom end rot", "calcium"]
+  },
+  {
+    "question": "What is the best fertilizer for chili plants?",
+    "answer": "Use a balanced NPK fertilizer and supplement with potassium for better fruiting in chili plants.",
+    "tags": ["chili", "fertilizer", "NPK"]
+  },
+  {
+    "question": "How can I increase yield in brinjal (eggplant)?",
+    "answer": "Regularly remove side shoots, provide adequate water, and use organic manure to increase brinjal yield.",
+    "tags": ["brinjal", "eggplant", "yield"]
+  },
+  {
+    "question": "What are common pests in okra and how to control them?",
+    "answer": "Aphids and fruit borers are common; use neem oil and pheromone traps for control in okra.",
+    "tags": ["okra", "pests", "control"]
+  },
+  {
+    "question": "How do I manage powdery mildew in cucumbers?",
+    "answer": "Apply sulfur-based fungicides and ensure good air circulation to manage powdery mildew in cucumbers.",
+    "tags": ["cucumber", "powdery mildew", "fungicide"]
+  },
+  {
+    "question": "When is the right time to harvest groundnuts?",
+    "answer": "Harvest groundnuts when most leaves turn yellow and pods are fully developed.",
+    "tags": ["groundnut", "harvest", "timing"]
+  },
+  {
+    "question": "How can I prevent fruit cracking in pomegranates?",
+    "answer": "Maintain consistent soil moisture and avoid sudden irrigation to prevent fruit cracking in pomegranates.",
+    "tags": ["pomegranate", "fruit cracking", "irrigation"]
+  },
+  {
+    "question": "What is the best way to prune grapevines?",
+    "answer": "Prune grapevines during dormancy, removing old and weak canes to encourage new growth.",
+    "tags": ["grape", "pruning", "vines"]
+  },
+  {
+    "question": "How do I control late blight in potatoes?",
+    "answer": "Use certified seed, avoid overhead irrigation, and apply recommended fungicides to control late blight in potatoes.",
+    "tags": ["potato", "late blight", "fungicide"]
+  },
+  {
+    "question": "What are the best practices for growing carrots?",
+    "answer": "Sow seeds in loose, sandy soil, thin seedlings, and keep soil moist for best carrot growth.",
+    "tags": ["carrot", "growing", "practices"]
+  },
+  {
+    "question": "How can I prevent bolting in spinach?",
+    "answer": "Grow spinach in cool weather and keep soil moist to prevent premature bolting.",
+    "tags": ["spinach", "bolting", "prevention"]
+  },
+  {
+    "question": "What is the ideal pH for cabbage cultivation?",
+    "answer": "Cabbage grows best in soil with pH 6.0 to 6.5.",
+    "tags": ["cabbage", "pH", "cultivation"]
+  },
+  {
+    "question": "How do I manage fruit fly in guava?",
+    "answer": "Use pheromone traps and destroy infested fruits to manage fruit fly in guava.",
+    "tags": ["guava", "fruit fly", "management"]
+  },
+  {
+    "question": "What is the best irrigation method for sugarcane?",
+    "answer": "Furrow irrigation is commonly used and effective for sugarcane cultivation.",
+    "tags": ["sugarcane", "irrigation", "method"]
+  },
+  {
+    "question": "How can I improve flowering in mango trees?",
+    "answer": "Apply potassium-rich fertilizer and ensure proper pruning to improve flowering in mango trees.",
+    "tags": ["mango", "flowering", "fertilizer"]
+  },
+  {
+    "question": "What are the signs of zinc deficiency in maize?",
+    "answer": "White or yellow stripes on young leaves indicate zinc deficiency in maize.",
+    "tags": ["maize", "zinc deficiency", "signs"]
+  },
+  {
+    "question": "How do I prevent root rot in beans?",
+    "answer": "Ensure well-drained soil and avoid overwatering to prevent root rot in beans.",
+    "tags": ["beans", "root rot", "prevention"]
+  },
+  {
+    "question": "What is the best time to plant watermelon?",
+    "answer": "Plant watermelon in late spring when soil temperature is above 21°C.",
+    "tags": ["watermelon", "planting", "timing"]
+  },
+  {
+    "question": "How can I increase fruit set in papaya?",
+    "answer": "Ensure presence of both male and female plants and provide regular irrigation to increase fruit set in papaya.",
+    "tags": ["papaya", "fruit set", "irrigation"]
+  },
+  {
+    "question": "What are the common diseases in cauliflower?",
+    "answer": "Black rot and downy mildew are common; use disease-free seeds and crop rotation for control in cauliflower.",
+    "tags": ["cauliflower", "disease", "control"]
   }
 ]
