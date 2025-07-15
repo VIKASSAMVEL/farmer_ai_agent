@@ -416,12 +416,10 @@ if __name__ == "__main__":
                     from farmer_agent.nlp.cv import PlantIdentifier
                     identifier = PlantIdentifier()
                     plant_result = identifier.identify(image_path)
-                    # Use agentic_response to generate a rich answer
-                    from farmer_agent.main import agentic_response
-                    user_query = f"What disease is in this image?"
-                    response = agentic_response(user_query, plant_result=plant_result)
                     self.add_bubble(f"Plant Identification Result: {plant_result}", is_user=False)
-                    self.add_bubble(f"Agentic Advice: {response}", is_user=False)
+                    tips = identifier.get_llm_disease_tips(plant_result)
+                    self.add_bubble("LLM Tips for Disease Solution/Medicine:", is_user=False)
+                    self.add_bubble(tips, is_user=False)
                 except Exception as e:
                     self.add_bubble(f"Error in plant identification: {str(e)}", is_user=False)
                 self.awaiting_image_path = False

@@ -95,6 +95,9 @@ def main():
                 identifier = PlantIdentifier()
                 result = identifier.identify(image_path)
                 print(acc.apply_contrast(f"Plant Identification Result: {result}"))
+                tips = identifier.get_llm_disease_tips(result)
+                print(acc.format_text("LLM Tips for Disease Solution/Medicine:"))
+                print(tips)
             else:
                 print("Invalid mode.")
         elif choice == "2":
