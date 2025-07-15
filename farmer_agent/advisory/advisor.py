@@ -18,17 +18,25 @@ def get_crop_advice(crop_name, soil_type=None):
     soil_data = load_json(os.path.join(DATA_DIR, 'soil_data.json'))
     market_prices = load_json(os.path.join(DATA_DIR, 'market_prices.json'))
 
-    # Case-insensitive crop lookup
-    crop_key = next((k for k in crops if k.lower() == crop_name.lower()), None) if crop_name else None
+    # Case-insensitive crop lookup that matches both crops.json and market_prices.json
+    crop_key = None
+    market_key = None
+    if crop_name:
+        crop_key = next((k for k in crops if k.lower() == crop_name.lower()), None)
+        market_key = next((k for k in market_prices if k.lower() == crop_name.lower()), None)
+        # Only use crop if present in both
+        if not (crop_key and market_key):
+            crop_key = crop_key or market_key
+            market_key = market_key or crop_key
+            # If still not found, set to None
+            if not (crop_key and market_key):
+                crop_key = market_key = None
     crop_info = crops.get(crop_key, {}) if crop_key else {}
+    market_info = market_prices.get(market_key, {}) if market_key else {}
 
     # Case-insensitive soil lookup
     soil_key = next((k for k in soil_data if k.lower() == soil_type.lower()), None) if soil_type else None
     soil_info = soil_data.get(soil_key, {}) if soil_key else {}
-
-    # Case-insensitive market price lookup
-    market_key = next((k for k in market_prices if k.lower() == crop_name.lower()), None) if crop_name else None
-    market_info = market_prices.get(market_key, {}) if market_key else {}
 
     advice = {
         "crop": crop_key if crop_key else crop_name,

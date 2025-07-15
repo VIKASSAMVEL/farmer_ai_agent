@@ -1,8 +1,47 @@
 {
   "Sandy Loam": {
-    "notes": "Good drainage, suitable for tomatoes and vegetables."
+    "notes": "Good drainage, suitable for tomatoes, groundnut, chickpea, and vegetables."
   },
   "Clay Loam": {
-    "notes": "Retains water, ideal for rice and paddy crops."
+    "notes": "Retains water, ideal for rice, soybean, and paddy crops."
+  },
+  "Loam": {
+    "notes": "Fertile, well-balanced soil for wheat, maize, and pulses."
+  },
+  "Well-drained Loam": {
+    "notes": "Prevents waterlogging, good for maize and vegetables."
+  },
+  "Deep Loam": {
+    "notes": "Rich, deep soil for sugarcane and banana."
+  },
+  "Black Soil": {
+    "notes": "High moisture retention, best for cotton and soybean."
+  },
+  "Red Soil": {
+    "notes": "Rich in iron, suitable for groundnut, pulses, and millets."
+  },
+  "Alluvial Soil": {
+    "notes": "Highly fertile, supports rice, wheat, sugarcane, and jute."
+  },
+  "Laterite Soil": {
+    "notes": "Rich in iron and aluminum, good for tea, coffee, cashew, and coconut."
+  },
+  "Desert Soil": {
+    "notes": "Low organic matter, suitable for drought-resistant crops like millets and pulses."
+  },
+  "Mountain Soil": {
+    "notes": "Found in hilly regions, supports tea, coffee, and temperate fruits."
+  },
+  "Peaty Soil": {
+    "notes": "High organic matter, found in Kerala, good for rice and vegetables."
+  },
+  "Saline Soil": {
+    "notes": "High salt content, needs reclamation for most crops."
+  },
+  "Marshy Soil": {
+    "notes": "Waterlogged, supports paddy and aquatic crops."
+  },
+  "Rich Loam": {
+    "notes": "Nutrient-rich, ideal for banana and horticultural crops."
   }
 }

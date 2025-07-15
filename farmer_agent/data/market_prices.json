@@ -1,8 +1,22 @@
 {
-  "Tomato": {
-    "price": 1.50
-  },
-  "Rice": {
-    "price": 0.80
-  }
+  "Tomato": { "price": 1.50 },
+  "Rice": { "price": 0.80 },
+  "Wheat": { "price": 1.10 },
+  "Maize": { "price": 0.95 },
+  "Groundnut": { "price": 2.20 },
+  "Sugarcane": { "price": 0.60 },
+  "Cotton": { "price": 2.50 },
+  "Soybean": { "price": 1.80 },
+  "Chickpea": { "price": 1.60 },
+  "Banana": { "price": 0.50 },
+  "Onion": { "price": 1.20 },
+  "Potato": { "price": 0.90 },
+  "Brinjal": { "price": 1.10 },
+  "Okra": { "price": 1.30 },
+  "Cabbage": { "price": 0.85 },
+  "Cauliflower": { "price": 1.25 },
+  "Pea": { "price": 1.40 },
+  "Mustard": { "price": 2.00 },
+  "Sunflower": { "price": 2.10 },
+  "Sorghum": { "price": 0.75 }
 }
