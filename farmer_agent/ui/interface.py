@@ -122,9 +122,11 @@ class ChatScreen(BoxLayout):
                 if hasattr(self, 'awaiting_advisory') and self.awaiting_advisory:
                     crop, soil = self.parse_crop_soil(user_text)
                     if crop:
-                        from advisory.advisor import get_crop_advice
-                        advice = get_crop_advice(crop, soil)
-                        self.add_bubble(f"Advisory for {crop} ({soil}):\n{advice}", is_user=False)
+                        if get_crop_advice:
+                            advice = get_crop_advice(crop, soil)
+                            self.add_bubble(advice, is_user=False)
+                        else:
+                            self.add_bubble("Advisory module not available.", is_user=False)
                     else:
                         self.add_bubble("Could not detect crop. Please try again.", is_user=False)
                     self.awaiting_advisory = False
@@ -246,15 +248,14 @@ class ChatScreen(BoxLayout):
                 self.add_bubble("Weather module not available.", is_user=False)
         except Exception as e:
             self.add_bubble(f"Error: {str(e)}", is_user=False)
-
-    def calendar_action(self, instance):
         try:
-            if CropCalendar:
-                calendar = CropCalendar()
-                schedule = calendar.get_schedule('Tomato')
-                self.add_bubble(f"Crop Calendar for Tomato:\n{schedule}", is_user=False)
+            if FAQ:
+                self.add_bubble("Please enter your question or keyword for FAQ:", is_user=False)
+                self.awaiting_faq = True
             else:
-                self.add_bubble("Calendar module not available.", is_user=False)
+                self.add_bubble("FAQ module not available.", is_user=False)
+        except Exception as e:
+            self.add_bubble(f"Error: {str(e)}", is_user=False)
         except Exception as e:
             self.add_bubble(f"Error: {str(e)}", is_user=False)
 

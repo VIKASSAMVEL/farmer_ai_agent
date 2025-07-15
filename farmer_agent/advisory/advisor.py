@@ -21,16 +21,21 @@ def get_crop_advice(crop_name, soil_type=None):
     soil_info = soil_data.get(soil_type, {}) if soil_type else {}
     market_info = market_prices.get(crop_name, {})
 
-    advice = {
-        'crop': crop_name,
-        'recommended_soil': crop_info.get('recommended_soil', 'N/A'),
-        'current_soil': soil_type,
-        'soil_notes': soil_info.get('notes', 'N/A'),
-        'market_price': market_info.get('price', 'N/A'),
-        'climate_smart_tips': crop_info.get('climate_smart_tips', []),
-        'care_instructions': crop_info.get('care_instructions', []),
-    }
-    return advice
+    advice = []
+    advice.append(f"Crop: {crop_name}")
+    advice.append(f"Recommended Soil: {crop_info.get('recommended_soil', 'N/A')}")
+    advice.append(f"Current Soil: {soil_type if soil_type else 'N/A'}")
+    advice.append(f"Soil Notes: {soil_info.get('notes', 'N/A')}")
+    advice.append(f"Market Price: {market_info.get('price', 'N/A')}")
+    if crop_info.get('climate_smart_tips'):
+        advice.append("Climate-Smart Tips:")
+        for tip in crop_info['climate_smart_tips']:
+            advice.append(f"- {tip}")
+    if crop_info.get('care_instructions'):
+        advice.append("Care Instructions:")
+        for inst in crop_info['care_instructions']:
+            advice.append(f"- {inst}")
+    return "\n".join(advice)
 
 if __name__ == "__main__":
     # Example usage
