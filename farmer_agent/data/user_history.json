@@ -42,11 +42,32 @@
           "feedback": "positive"
         },
         "timestamp": "2025-07-15T20:54:07.814783"
+      },
+      {
+        "query": "Maize, None",
+        "advisory": {
+          "crop": "Maize",
+          "recommended_soil": "Well-drained Loam",
+          "current_soil": "N/A",
+          "soil_notes": "N/A",
+          "market_price": 0.95,
+          "climate_smart_tips": [
+            "Use raised beds in flood-prone areas.",
+            "Apply organic manure before sowing."
+          ],
+          "care_instructions": [
+            "Thin seedlings to optimal spacing.",
+            "Control weeds during early growth."
+          ],
+          "formatted": "Crop: Maize\nRecommended Soil: Well-drained Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 0.95\nClimate-Smart Tips:\n- Use raised beds in flood-prone areas.\n- Apply organic manure before sowing.\nCare Instructions:\n- Thin seedlings to optimal spacing.\n- Control weeds during early growth.",
+          "feedback": "positive"
+        },
+        "timestamp": "2025-07-15T22:02:06.322012"
       }
     ],
     "meta": {
       "created_at": "2025-07-15T11:28:21.399269",
-      "last_active": "2025-07-15T20:54:07.814783"
+      "last_active": "2025-07-15T22:07:54.872511"
     }
   }
 }
