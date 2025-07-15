@@ -172,6 +172,19 @@ class ChatScreen(BoxLayout):
 
     def weather_action(self, instance):
         if WeatherEstimator:
+            # Load OpenWeatherMap API key from env.local or environment
+            import os
+            def load_env_local():
+                env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'env.local')
+                if os.path.exists(env_path):
+                    with open(env_path, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            if line.strip() and not line.strip().startswith('#'):
+                                k, sep, v = line.partition('=')
+                                if sep:
+                                    os.environ[k.strip()] = v.strip()
+            load_env_local()
+            self._openweather_api_key = os.environ.get('OPENWEATHER_API_KEY')
             self.weather_inputs = {}
             self.add_bubble("Enter season (summer/monsoon/winter, blank for auto):", is_user=False)
             self.awaiting_weather_season = True
@@ -233,13 +246,35 @@ class ChatScreen(BoxLayout):
                 if get_crop_advice:
                     crop = user_text.strip()
                     soil = ''  # Optionally prompt for soil in a second step
+                    self._last_advisory_crop = crop
+                    self._last_advisory_soil = soil
                     advice = get_crop_advice(crop, soil if soil else None)
+                    self._last_advisory = advice
                     self.add_bubble("Personalized Advisory:", is_user=False)
                     import json
                     self.add_bubble(json.dumps(advice, indent=2, ensure_ascii=False), is_user=False)
+                    self.add_bubble("Was this advice helpful? (y/n):", is_user=False)
+                    self.awaiting_advisory_feedback = True
                 else:
                     self.add_bubble("Advisory module not available.", is_user=False)
                 self.awaiting_advisory = False
+            elif hasattr(self, 'awaiting_advisory_feedback') and self.awaiting_advisory_feedback:
+                feedback = user_text.strip().lower()
+                feedback_val = 'positive' if feedback == 'y' else ('negative' if feedback == 'n' else None)
+                if hasattr(self, '_last_advisory') and isinstance(self._last_advisory, dict):
+                    if feedback_val:
+                        self._last_advisory['feedback'] = feedback_val
+                # Optionally, store feedback in user profile if available
+                try:
+                    from data.user_profile import UserManager
+                    manager = UserManager()
+                    user = manager.current_user if hasattr(manager, 'current_user') else None
+                    if user:
+                        user.add_query(f"{getattr(self, '_last_advisory_crop', '')}, {getattr(self, '_last_advisory_soil', '')}", self._last_advisory)
+                except Exception:
+                    pass
+                self.add_bubble("Thank you for your feedback!", is_user=False)
+                self.awaiting_advisory_feedback = False
             elif self.awaiting_faq:
                 if FAQ:
                     faq = FAQ()
@@ -282,7 +317,7 @@ class ChatScreen(BoxLayout):
                         self.add_bubble("Invalid date format, using today.", is_user=False)
                 self.weather_inputs['date'] = date
                 if WeatherEstimator:
-                    estimator = WeatherEstimator(openweather_api_key="5fd03eb1df84e177df96229a5eabe09e")
+                    estimator = WeatherEstimator(openweather_api_key=self._openweather_api_key)
                     weather = estimator.estimate(
                         season=self.weather_inputs.get('season'),
                         location=self.weather_inputs.get('location'),

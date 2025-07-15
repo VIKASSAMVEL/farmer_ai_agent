@@ -34,7 +34,19 @@ def main():
     )
 
     # Weather API key prompt (optional)
-    openweather_api_key = "5fd03eb1df84e177df96229a5eabe09e"
+    # Load OpenWeatherMap API key from env.local or environment
+    def load_env_local():
+        import os
+        env_path = os.path.join(os.path.dirname(__file__), '..', 'env.local')
+        if os.path.exists(env_path):
+            with open(env_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip() and not line.strip().startswith('#'):
+                        k, sep, v = line.partition('=')
+                        if sep:
+                            os.environ[k.strip()] = v.strip()
+    load_env_local()
+    openweather_api_key = os.environ.get('OPENWEATHER_API_KEY')
     while True:
         print(acc.format_text("Select Feature:"))
         print("1. Input (Voice/Text/Image)")
@@ -73,6 +85,13 @@ def main():
             print(acc.format_text("Personalized Advisory:"))
             print(json.dumps(advice, indent=2, ensure_ascii=False))
             acc.speak_text(advice if isinstance(advice, str) else advice.get('care_instructions', ['No instructions'])[0])
+            # Collect feedback
+            feedback = input("Was this advice helpful? (y/n): ").strip().lower()
+            feedback_val = 'positive' if feedback == 'y' else ('negative' if feedback == 'n' else None)
+            # Store feedback in the advisory dict for analytics
+            if isinstance(advice, dict):
+                if feedback_val:
+                    advice['feedback'] = feedback_val
             user.add_query(f"{crop}, {soil}", advice)
 
         elif choice == "3":
