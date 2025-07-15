@@ -11,14 +11,23 @@ def speak(text, lang_voice=None):
     voices = engine.getProperty('voices')
     if lang_voice:
         # Try to set the voice by name or language code
+        found_voice = False
         if isinstance(voices, (list, tuple)):
             for voice in voices:
-                if lang_voice.lower() in getattr(voice, 'name', '').lower() or lang_voice.lower() in getattr(voice, 'id', '').lower():
+                name = getattr(voice, 'name', '').lower()
+                vid = getattr(voice, 'id', '').lower()
+                if lang_voice.lower() in name or lang_voice.lower() in vid:
                     engine.setProperty('voice', getattr(voice, 'id', ''))
+                    found_voice = True
                     break
         else:
-            if lang_voice.lower() in getattr(voices, 'name', '').lower() or lang_voice.lower() in getattr(voices, 'id', '').lower():
+            name = getattr(voices, 'name', '').lower()
+            vid = getattr(voices, 'id', '').lower()
+            if lang_voice.lower() in name or lang_voice.lower() in vid:
                 engine.setProperty('voice', getattr(voices, 'id', ''))
+                found_voice = True
+        if not found_voice:
+            print(f"Warning: Voice '{lang_voice}' not found. Using default voice.")
     engine.say(text)
     engine.runAndWait()
 

@@ -77,3 +77,20 @@ Voice 1: Microsoft Zira Desktop - English (United States) | ID: HKEY_LOCAL_MACHI
 [AGENT]: User history cleared.
 [AGENT]: User history cleared.
 [AGENT]: Goodbye! Close the window to exit.
+2025-07-15 19:15:06 [AGENT]: Please enter your question or keyword for FAQ:
+2025-07-15 19:15:11 [USER]: tomato
+2025-07-15 19:15:11 [AGENT]: Waiting for response...
+2025-07-15 19:15:27 [AGENT]: LLM FAQ Response:
+2025-07-15 19:15:27 [AGENT]: The humble tomato!
+
+Tomatoes are one of the most popular fruits (yes, they're a fruit!) in the world. Here are some fun facts about tomatoes:
+
+1. **Origin**: Tomatoes originated in South America over 2,000 years ago.
+2. **Nutrition**: Tomatoes are low in calories and rich in vitamins A and C, potassium, and lycopene (an antioxidant).
+3. **Varieties**: There are hundreds of tomato varieties, including cherry tomatoes, beefsteak tomatoes, Roma tomatoes, and many more.
+4. **Culinary uses**: Tomatoes are used in countless dishes, such as pasta sauces, salsas, salads, sandwiches, and soups.
+5. **Garden superstar**: Tomatoes are one of the most popular garden vegetables (or fruits!) to grow at home.
+6. **Colorful history**: Tomatoes were once believed to be poisonous in Europe due to their bright red color (which was thought to be a sign of poison).
+7. **Record-breaking**: The largest tomato ever recorded weighed over 3 pounds!
+
+What's your favorite way to enjoy tomatoes?

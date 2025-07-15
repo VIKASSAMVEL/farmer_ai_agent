@@ -16,13 +16,33 @@ class FAQ:
         with open(FAQ_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
 
-    def search(self, query, tags=None, fuzzy=False):
+    def search(self, query, tags=None, fuzzy=False, use_llm=True, model="llama3:8b", host="http://localhost:11434"):
         """
-        Search FAQ by question, answer, and optional tags. Supports fuzzy/partial match.
+        Search FAQ using local LLM (Ollama) if available, otherwise fallback to static FAQ search.
         :param query: search string
         :param tags: list of tags/categories to filter (optional)
         :param fuzzy: if True, allow partial/fuzzy match
+        :param use_llm: if True, use Ollama LLM for response
+        :param model: Ollama model name
+        :param host: Ollama server host
         """
+        if use_llm:
+            try:
+                import requests
+                url = f"{host}/api/generate"
+                payload = {
+                    "model": model,
+                    "prompt": query,
+                    "stream": False
+                }
+                response = requests.post(url, json=payload, timeout=30)
+                response.raise_for_status()
+                llm_response = response.json().get("response", "")
+                return [{"question": query, "answer": llm_response, "tags": ["llm"]}]
+            except Exception as e:
+                # Fallback to static search if LLM fails
+                pass
+        # --- Static search fallback ---
         import difflib
         query_l = query.lower()
         results = []

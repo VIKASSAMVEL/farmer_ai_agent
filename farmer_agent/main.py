@@ -19,21 +19,22 @@ def agentic_response(user_query, plant_result=None):
 
 # Unified Farmer Agent Main Script (Offline)
 import sys
+import sys
 import os
-from utils.env_loader import load_env_local
+from farmer_agent.utils.env_loader import load_env_local
 import json
-from advisory.advisor import get_crop_advice
-from nlp.stt import recognize_speech
-from nlp.tts import speak, list_voices
-from nlp.translate import OfflineTranslator
-from nlp.cv import PlantIdentifier
-from utils.file_utils import load_json
-from data.user_profile import UserManager
-from data.crop_calendar import CropCalendar, Reminders
-from data.faq import FAQ
-from data.weather import WeatherEstimator
-from data.analytics import Analytics
-from utils.accessibility import Accessibility
+from farmer_agent.advisory.advisor import get_crop_advice
+from farmer_agent.nlp.stt import recognize_speech
+from farmer_agent.nlp.tts import speak, list_voices
+from farmer_agent.nlp.translate import OfflineTranslator
+from farmer_agent.nlp.cv import PlantIdentifier
+from farmer_agent.utils.file_utils import load_json
+from farmer_agent.data.user_profile import UserManager
+from farmer_agent.data.crop_calendar import CropCalendar, Reminders
+from farmer_agent.data.faq import FAQ
+from farmer_agent.data.weather import WeatherEstimator
+from farmer_agent.data.analytics import Analytics
+from farmer_agent.utils.accessibility import Accessibility
 
 def main():
     print("\n=== Farmer Agent ===")
@@ -71,18 +72,16 @@ def main():
 
         if choice == "1":
             print("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image")
-            mode = input("Select mode: ").strip()
+            mode = input("Enter input mode: ").strip()
             if mode == "1":
                 lang = input("Language code (default: en): ").strip() or "en"
-                from nlp.stt import recognize_speech
                 result = recognize_speech(source="mic", lang=lang)
                 text = result.get("text", "") if isinstance(result, dict) else result
-                print(acc.apply_contrast(f"Recognized Text: {text}"))
+                print(acc.apply_contrast(f"Transcribed Text: {text}"))
                 acc.speak_text(text)
             elif mode == "2":
                 file_path = input("Enter audio file path: ").strip()
                 lang = input("Language code (default: auto): ").strip() or "auto"
-                from nlp.stt import recognize_speech
                 result = recognize_speech(source="file", file_path=file_path, lang=lang)
                 text = result.get("text", "") if isinstance(result, dict) else result
                 print(acc.apply_contrast(f"Transcribed Text: {text}"))
@@ -98,7 +97,6 @@ def main():
                 print(acc.apply_contrast(f"Plant Identification Result: {result}"))
             else:
                 print("Invalid mode.")
-
         elif choice == "2":
             crop = input("Enter crop name for advisory: ")
             soil = input("Enter soil type (optional): ")
@@ -117,7 +115,6 @@ def main():
             if feedback_val:
                 advice['feedback'] = feedback_val
             user.add_query(f"{crop}, {soil}", advice)
-
         elif choice == "3":
             calendar = CropCalendar()
             print(acc.format_text("Crop Calendar:"))
@@ -130,14 +127,16 @@ def main():
                 activity = input("Activity: ")
                 days = int(input("Days from now: "))
                 reminders.add_reminder(crop, activity, days)
-
         elif choice == "4":
+            query = input("Enter your FAQ question: ")
             faq = FAQ()
-            query = input("Enter keyword for FAQ search: ")
-            results = faq.search(query)
-            print(acc.format_text("FAQ Results:"))
-            print(json.dumps(results, indent=2, ensure_ascii=False))
-
+            results = faq.search(query, use_llm=True)
+            if results:
+                answer = results[0].get('answer', '')
+                print(f"LLM FAQ Response:\n{answer}")
+                speak(answer)
+            else:
+                print("No response from LLM.")
         elif choice == "5":
             estimator = WeatherEstimator(openweather_api_key=openweather_api_key)
             use_online = True
@@ -164,18 +163,15 @@ def main():
             if warnings:
                 for w in warnings:
                     print(f"- {w}")
-
         elif choice == "6":
             analytics = Analytics()
             print(acc.format_text("User Activity Summary:"))
             print(json.dumps(analytics.user_activity_summary(username), indent=2, ensure_ascii=False))
             print(acc.format_text("Crop Trends:"))
             print(json.dumps(analytics.crop_trends(), indent=2, ensure_ascii=False))
-
         elif choice == "7":
             print(acc.format_text("Available TTS Voices:"))
             list_voices()
-
         elif choice == "8":
             text = input("Enter text to translate: ")
             tgt_lang = input("Enter target language code (hi=Hindi, ta=Tamil, te=Telugu, kn=Kannada, ml=Malayalam): ").strip() or "hi"
@@ -191,6 +187,7 @@ def main():
             break
         else:
             print("Invalid choice.")
+
 
 if __name__ == "__main__":
     main()

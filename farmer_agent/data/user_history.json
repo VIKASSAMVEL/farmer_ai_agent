@@ -1,9 +1,17 @@
 {
   "deva": {
-    "queries": [],
+    "queries": [
+      {
+        "query": "Tomato, Sandy Loam",
+        "advisory": {
+          "advice": "Sample advisory"
+        },
+        "timestamp": "2025-07-15T13:51:27.500839"
+      }
+    ],
     "meta": {
       "created_at": "2025-07-15T11:28:21.399269",
-      "last_active": "2025-07-15T12:58:39.301937"
+      "last_active": "2025-07-15T13:51:27.500839"
     }
   }
 }

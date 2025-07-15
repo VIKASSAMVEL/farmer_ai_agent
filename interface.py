@@ -240,13 +240,18 @@ class ChatScreen(BoxLayout):
                 #else:
                 #    response_text = "Advisory module not available."
                 self.awaiting_advisory = False
-            elif self.awaiting_faq:                
+            elif self.awaiting_faq:
                 if FAQ:
                     faq = FAQ()
-                    results = faq.search(user_text)
-                    self.add_bubble(f"FAQ Results for '{user_text}':", is_user=False)
-                    import json
-                    self.add_bubble(json.dumps(results, indent=2, ensure_ascii=False), is_user=False)
+                    results = faq.search(user_text, use_llm=True)
+                    if results:
+                        answer = results[0].get('answer', '')
+                        self.add_bubble(f"LLM FAQ Response:", is_user=False)
+                        self.add_bubble(answer, is_user=False)
+                        if speak:
+                            speak(answer)
+                    else:
+                        self.add_bubble("No response from LLM.", is_user=False)
                 else:
                     self.add_bubble("FAQ module not available.", is_user=False)
                 self.awaiting_faq = False
