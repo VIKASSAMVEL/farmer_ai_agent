@@ -111,7 +111,7 @@ class ChatScreen(BoxLayout):
             # Scale value based on window width (base 800px)
             return int(val * Window.width / 800)
         header = BoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
-        header_label = Label(text='Farmer AI Agent', font_size=get_scaled(28), bold=True, color=(0.2, 0.6, 0.2, 1))
+        header_label = Label(text='Farmer AI Agent', font_size=get_scaled(28), bold=True, color=(0.2, 0.6, 0.2, 1), font_name='C:\\Windows\\Fonts\\seguiemj.ttf')
         header.add_widget(header_label)
         self.add_widget(header)
         # Chat history area with more padding
@@ -181,16 +181,16 @@ class ChatScreen(BoxLayout):
         # Feature buttons
         feature_layout = BoxLayout(size_hint=(1, 0.18), spacing=get_scaled(10), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
         self.feature_buttons = {
-            "Input": Button(text="🎤 Input", on_press=self.input_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Advisory": Button(text="🌱 Advisory", on_press=self.advisory_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Calendar": Button(text="📅 Calendar", on_press=self.calendar_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "FAQ": Button(text="❓ FAQ", on_press=self.faq_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Weather": Button(text="☀️ Weather", on_press=self.weather_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Translate": Button(text="🌐 Translate", on_press=self.translate_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Analytics": Button(text="📊 Analytics", on_press=self.analytics_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "TTS Voices": Button(text="🔊 TTS Voices", on_press=self.tts_voices_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Clear History": Button(text="🧹 Clear History", on_press=self.clear_history_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
-            "Exit": Button(text="🚪 Exit", on_press=self.exit_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16))
+            "Input": Button(text="🎤 Input", on_press=self.input_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Advisory": Button(text="🌱 Advisory", on_press=self.advisory_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Calendar": Button(text="📅 Calendar", on_press=self.calendar_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "FAQ": Button(text="❓ FAQ", on_press=self.faq_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Weather": Button(text="☀️ Weather", on_press=self.weather_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Translate": Button(text="🌐 Translate", on_press=self.translate_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Analytics": Button(text="📊 Analytics", on_press=self.analytics_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "TTS Voices": Button(text="🔊 TTS Voices", on_press=self.tts_voices_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Clear History": Button(text="🧹 Clear History", on_press=self.clear_history_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Exit": Button(text="🚪 Exit", on_press=self.exit_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf')
         }
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
@@ -198,7 +198,7 @@ class ChatScreen(BoxLayout):
 
         # Footer for branding/accessibility
         footer = BoxLayout(size_hint=(1, 0.05), padding=[0, get_scaled(4), 0, get_scaled(4)])
-        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(0.2, 0.6, 0.2, 1))
+        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(0.2, 0.6, 0.2, 1), font_name='C:\\Windows\\Fonts\\seguiemj.ttf')
         footer.add_widget(footer_label)
         self.add_widget(footer)
         # State flags
