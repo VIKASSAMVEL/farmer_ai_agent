@@ -52,3 +52,69 @@ Climate-Smart Tips:
 Care Instructions:
 - Check for leaf spots weekly.
 - Fertilize with compost every 2 weeks.
+2025-07-15 22:14:08 [AGENT]: Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image
+2025-07-15 22:14:27 [AGENT]: Select your crop for advisory:
+2025-07-15 22:14:32 [USER]: Tomato
+2025-07-15 22:14:32 [AGENT]: Waiting for response...
+2025-07-15 22:14:32 [AGENT]: === STRUCTURED ADVISORY ===
+2025-07-15 22:14:32 [AGENT]: {
+  "crop": "Tomato",
+  "recommended_soil": "Sandy Loam",
+  "current_soil": "N/A",
+  "soil_notes": "N/A",
+  "market_price": 1.5,
+  "climate_smart_tips": [
+    "Use drip irrigation to save water.",
+    "Apply organic mulch for moisture retention."
+  ],
+  "care_instructions": [
+    "Check for leaf spots weekly.",
+    "Fertilize with compost every 2 weeks."
+  ],
+  "formatted": "Crop: Tomato\nRecommended Soil: Sandy Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 1.5\nClimate-Smart Tips:\n- Use drip irrigation to save water.\n- Apply organic mulch for moisture retention.\nCare Instructions:\n- Check for leaf spots weekly.\n- Fertilize with compost every 2 weeks."
+}
+2025-07-15 22:14:32 [AGENT]: === FORMATTED ADVISORY ===
+2025-07-15 22:14:32 [AGENT]: Crop: Tomato
+Recommended Soil: Sandy Loam
+Current Soil: N/A
+Soil Notes: N/A
+Market Price: 1.5
+Climate-Smart Tips:
+- Use drip irrigation to save water.
+- Apply organic mulch for moisture retention.
+Care Instructions:
+- Check for leaf spots weekly.
+- Fertilize with compost every 2 weeks.
+2025-07-15 22:14:52 [AGENT]: User Activity Summary:
+2025-07-15 22:14:52 [AGENT]: {
+  "total_queries": 0,
+  "last_query": null
+}
+2025-07-15 22:14:52 [AGENT]: Crop Trends:
+2025-07-15 22:14:52 [AGENT]: {
+  "Tomato": 1
+}
+2025-07-15 22:14:58 [AGENT]: Please enter your question or keyword for FAQ:
+2025-07-15 22:17:44 [AGENT]: Calendar options: 1. View crop schedule 2. List crops 3. Add reminder 4. Add recurring reminder 5. Delete reminder 6. Next activity
+Enter option number:
+2025-07-15 22:22:04 [AGENT]: Please enter your question or keyword for FAQ:
+2025-07-15 22:22:06 [AGENT]: Calendar options: 1. View crop schedule 2. List crops 3. Add reminder 4. Add recurring reminder 5. Delete reminder 6. Next activity
+Enter option number:
+2025-07-15 22:22:17 [AGENT]: Detected location: Chennai
+2025-07-15 22:22:17 [AGENT]: Could not fetch weekly forecast. Check API key or location.
+2025-07-15 22:22:25 [AGENT]: User Activity Summary:
+2025-07-15 22:22:25 [AGENT]: {
+  "total_queries": 0,
+  "last_query": null
+}
+2025-07-15 22:22:25 [AGENT]: Crop Trends:
+2025-07-15 22:22:25 [AGENT]: {
+  "Tomato": 1
+}
+2025-07-15 22:22:33 [AGENT]: Calendar options: 1. View crop schedule 2. List crops 3. Add reminder 4. Add recurring reminder 5. Delete reminder 6. Next activity
+Enter option number:
+2025-07-15 22:22:36 [AGENT]: Select your crop for advisory:
+2025-07-15 22:22:40 [USER]: Tomato
+2025-07-15 22:22:40 [AGENT]: Invalid option.
+2025-07-15 22:22:46 [AGENT]: Select your crop for advisory:
+2025-07-15 22:22:52 [USER]: Potato

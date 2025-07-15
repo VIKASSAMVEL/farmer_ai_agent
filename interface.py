@@ -12,19 +12,21 @@ from kivy.graphics import Color, RoundedRectangle
 
 class ChatBubble(BoxLayout):
     def __init__(self, text, is_user=False, **kwargs):
-        super().__init__(orientation='horizontal', size_hint_y=None, height=60, padding=[10, 5, 10, 5], **kwargs)
+        super().__init__(orientation='horizontal', size_hint_y=None, padding=[10, 5, 10, 5], **kwargs)
         from datetime import datetime
+        from kivy.core.window import Window
         timestamp = datetime.now().strftime('%H:%M')
         self.bubble_color = (0.2, 0.6, 0.2, 1) if is_user else (0.9, 0.9, 0.9, 1)
         self.label = Label(
             text=text,
             size_hint_x=0.85,
             halign='right' if is_user else 'left',
-            valign='middle',
+            valign='top',
             color=(1, 1, 1, 1) if is_user else (0, 0, 0, 1),
-            text_size=(550, None),
+            text_size=(Window.width * 0.7, None),
             markup=True
         )
+        self.label.bind(texture_size=self._update_height) # type: ignore
         self.timestamp_label = Label(
             text=timestamp,
             size_hint_x=0.15,
@@ -54,10 +56,13 @@ class ChatBubble(BoxLayout):
         if hasattr(self, 'bg_rect'):
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
-        # The widgets are already added in __init__, so no need to add again.
-        # If you want to update, just update their properties.
-        # self.add_widget(self.label)
-        # self.add_widget(self.timestamp_label)
+
+    def _update_height(self, *args):
+        # Dynamically set label and bubble height based on text content
+        min_height = 40
+        padding = 24
+        self.label.height = max(self.label.texture_size[1] + padding, min_height)
+        self.height = self.label.height + 10
 
     def _update_bg(self, *args):
         pass
@@ -311,24 +316,47 @@ class ChatScreen(BoxLayout):
         self.chat_history.add_widget(crop_spinner)
 
     def calendar_action(self, instance):
-        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
-        self.chat_history.add_widget(spinner)
-        self.text_input.disabled = True
-        import threading
-        from kivy.clock import Clock
-        def run_calendar():
-            result_bubbles = []
+        # Interactive calendar menu using CropCalendar and Reminders
+        try:
+            from farmer_agent.data.crop_calendar import CropCalendar, Reminders
+            self.calendar = CropCalendar()
+            self.reminders = Reminders()
+        except Exception as e:
+            self.add_bubble(f"Calendar module error: {str(e)}", is_user=False)
+            return
+        self.add_bubble("Calendar options: 1. View crop schedule 2. List crops 3. Add reminder 4. Add recurring reminder 5. Delete reminder 6. Next activity\nEnter option number:", is_user=False)
+        self.awaiting_calendar_option = True
+
+    def handle_calendar_option(self, user_text):
+        option = user_text.strip()
+        if not hasattr(self, 'calendar') or not hasattr(self, 'reminders'):
             try:
-                result_bubbles.append(("Calendar feature coming soon!", False))
+                from farmer_agent.data.crop_calendar import CropCalendar, Reminders
+                self.calendar = CropCalendar()
+                self.reminders = Reminders()
             except Exception as e:
-                result_bubbles.append((f"Calendar error: {str(e)}", False))
-            def update_ui(dt):
-                self.chat_history.remove_widget(spinner)
-                self.text_input.disabled = False
-                for text, is_user in result_bubbles:
-                    self.add_bubble(text, is_user=is_user)
-            Clock.schedule_once(update_ui, 0)
-        threading.Thread(target=run_calendar).start()
+                self.add_bubble(f"Calendar module error: {str(e)}", is_user=False)
+                return
+        if option == "1":
+            self.add_bubble("Enter crop name:", is_user=False)
+            self.awaiting_calendar_crop = True
+        elif option == "2":
+            crops = self.calendar.list_crops() if self.calendar else []
+            self.add_bubble("Available crops: " + ", ".join(crops), is_user=False)
+        elif option == "3":
+            self.add_bubble("Enter crop name for reminder:", is_user=False)
+            self.awaiting_reminder_crop = True
+        elif option == "4":
+            self.add_bubble("Enter crop name for recurring reminder:", is_user=False)
+            self.awaiting_recurring_crop = True
+        elif option == "5":
+            self.add_bubble("Enter crop name to delete reminders:", is_user=False)
+            self.awaiting_delete_crop = True
+        elif option == "6":
+            self.add_bubble("Enter crop name for next activity:", is_user=False)
+            self.awaiting_next_activity_crop = True
+        else:
+            self.add_bubble("Invalid option.", is_user=False)
     def faq_action(self, instance):
         spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
         self.chat_history.add_widget(spinner)
@@ -476,7 +504,7 @@ class ChatScreen(BoxLayout):
     def send_message(self, instance):
         user_text = self.text_input.text.strip()
         # Input validation for crop names (advisory, calendar)
-        if self.awaiting_advisory or self.awaiting_calendar:
+        if self.awaiting_advisory:
             crop_list = ["Tomato", "Rice", "Wheat", "Maize", "Potato", "Onion", "Cotton", "Sugarcane"]
             if user_text not in crop_list:
                 self.add_bubble(f"Invalid crop name. Please select from: {', '.join(crop_list)}", is_user=False)
@@ -492,19 +520,120 @@ class ChatScreen(BoxLayout):
         if not user_text:
             return
         self.add_bubble(user_text, is_user=True)
-        try:
-            # Show loading indicator
-            self.add_bubble("Waiting for response...", is_user=False)
-            spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
-            self.chat_history.add_widget(spinner)
-            self.text_input.disabled = True  # Disable input field
-
-            # Schedule backend call
-            from kivy.clock import Clock
-            Clock.schedule_once(lambda dt: self.perform_backend_task(user_text, spinner), 0)  # Call in the next frame
-        except Exception as e:
-            show_debug_popup(traceback.format_exc())
-        self.text_input.text = ''
+        # Calendar menu stepwise handling
+        if hasattr(self, 'awaiting_calendar_option') and self.awaiting_calendar_option:
+            self.handle_calendar_option(user_text)
+            self.awaiting_calendar_option = False
+            self.text_input.text = ''
+            return
+        # Calendar crop schedule
+        if hasattr(self, 'awaiting_calendar_crop') and self.awaiting_calendar_crop:
+            crop = user_text.strip()
+            self.last_calendar_crop = crop
+            import json
+            self.add_bubble("Crop Calendar:", is_user=False)
+            if hasattr(self, 'calendar') and self.calendar:
+                self.add_bubble(json.dumps(self.calendar.get_schedule(crop), indent=2, ensure_ascii=False), is_user=False)
+            self.add_bubble("Reminders:", is_user=False)
+            if hasattr(self, 'reminders') and self.reminders:
+                self.add_bubble(json.dumps(self.reminders.get_upcoming(), indent=2, ensure_ascii=False), is_user=False)
+            self.awaiting_calendar_crop = False
+            self.text_input.text = ''
+            return
+        # Add reminder
+        if hasattr(self, 'awaiting_reminder_crop') and self.awaiting_reminder_crop:
+            self.reminder_crop = user_text.strip()
+            self.add_bubble("Activity:", is_user=False)
+            self.awaiting_reminder_activity = True
+            self.awaiting_reminder_crop = False
+            self.text_input.text = ''
+            return
+        if hasattr(self, 'awaiting_reminder_activity') and self.awaiting_reminder_activity:
+            self.reminder_activity = user_text.strip()
+            self.add_bubble("Days from now:", is_user=False)
+            self.awaiting_reminder_days = True
+            self.awaiting_reminder_activity = False
+            self.text_input.text = ''
+            return
+        if hasattr(self, 'awaiting_reminder_days') and self.awaiting_reminder_days:
+            days = None
+            try:
+                days = int(user_text.strip())
+            except Exception:
+                self.add_bubble("Error: Invalid number of days.", is_user=False)
+            if days is not None and hasattr(self, 'reminders') and self.reminders:
+                self.reminders.add_reminder(self.reminder_crop, self.reminder_activity, days)
+                self.add_bubble("Reminder added.", is_user=False)
+            self.awaiting_reminder_days = False
+            self.text_input.text = ''
+            return
+        # Add recurring reminder
+        if hasattr(self, 'awaiting_recurring_crop') and self.awaiting_recurring_crop:
+            self.recurring_crop = user_text.strip()
+            self.add_bubble("Activity:", is_user=False)
+            self.awaiting_recurring_activity = True
+            self.awaiting_recurring_crop = False
+            self.text_input.text = ''
+            return
+        if hasattr(self, 'awaiting_recurring_activity') and self.awaiting_recurring_activity:
+            self.recurring_activity = user_text.strip()
+            self.add_bubble("Start in how many days?:", is_user=False)
+            self.awaiting_recurring_start = True
+            self.awaiting_recurring_activity = False
+            self.text_input.text = ''
+            return
+        if hasattr(self, 'awaiting_recurring_start') and self.awaiting_recurring_start:
+            try:
+                self.recurring_start = int(user_text.strip())
+                self.add_bubble("Interval (days):", is_user=False)
+                self.awaiting_recurring_interval = True
+            except Exception as e:
+                self.add_bubble(f"Error: {str(e)}", is_user=False)
+            self.awaiting_recurring_start = False
+            self.text_input.text = ''
+            return
+        if hasattr(self, 'awaiting_recurring_interval') and self.awaiting_recurring_interval:
+            try:
+                self.recurring_interval = int(user_text.strip())
+                self.add_bubble("Occurrences:", is_user=False)
+                self.awaiting_recurring_occurrences = True
+            except Exception as e:
+                self.add_bubble(f"Error: {str(e)}", is_user=False)
+            self.awaiting_recurring_interval = False
+            self.text_input.text = ''
+            return
+        if hasattr(self, 'awaiting_recurring_occurrences') and self.awaiting_recurring_occurrences:
+            try:
+                occurrences = int(user_text.strip())
+                if hasattr(self, 'reminders') and self.reminders:
+                    self.reminders.add_recurring_reminder(self.recurring_crop, self.recurring_activity, self.recurring_start, self.recurring_interval, occurrences)
+                    self.add_bubble("Recurring reminder(s) added.", is_user=False)
+            except Exception as e:
+                self.add_bubble(f"Error: {str(e)}", is_user=False)
+            self.awaiting_recurring_occurrences = False
+            self.text_input.text = ''
+            return
+        # Delete reminders
+        if hasattr(self, 'awaiting_delete_crop') and self.awaiting_delete_crop:
+            crop = user_text.strip()
+            if hasattr(self, 'reminders') and self.reminders:
+                self.reminders.delete_reminder(crop)
+                self.add_bubble(f"All reminders for {crop} deleted.", is_user=False)
+            self.awaiting_delete_crop = False
+            self.text_input.text = ''
+            return
+        # Next activity
+        if hasattr(self, 'awaiting_next_activity_crop') and self.awaiting_next_activity_crop:
+            crop = user_text.strip()
+            next_act = self.calendar.next_activity(crop) if hasattr(self, 'calendar') and self.calendar else None
+            if next_act:
+                self.add_bubble(f"Next activity for {crop}: {next_act['activity']} on {next_act['date']}", is_user=False)
+            else:
+                self.add_bubble(f"No upcoming activities for {crop}.", is_user=False)
+            self.awaiting_next_activity_crop = False
+            self.text_input.text = ''
+            return
+        # ...existing code for other features...
 
     def perform_backend_task(self, user_text, spinner):
         import threading
