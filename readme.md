@@ -3,8 +3,7 @@
 **An offline-first, AI-powered agricultural assistant designed to provide Indian farmers with actionable advice, reminders, and tools to improve crop management and decision-making.**
 
 The Farmer AI Agent is a comprehensive solution that combines local data, machine learning models, and an intuitive user interface to address the daily challenges faced by farmers. It operates primarily offline, with optional online features for enhanced, real-time data.
-
-*(Placeholder for a screenshot or GIF of the Kivy GUI in action)*
+![alt text](image.png)
 
 ---
 
