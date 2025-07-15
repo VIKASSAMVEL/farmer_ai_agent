@@ -1,98 +1,27 @@
-# Offline Weather Estimation
-# Provides basic weather advice using preloaded patterns or simple algorithms
-import json
 import os
+import json
 import requests
 from datetime import datetime
 
+# Paths for data files
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+ENV_LOCAL_PATH = os.path.join(PROJECT_ROOT, 'env.local')
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 WEATHER_FILE = os.path.join(DATA_DIR, 'weather_patterns.json')
 
+# Load environment variables
+if os.path.exists(ENV_LOCAL_PATH):
+    with open(ENV_LOCAL_PATH, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                key, value = line.split('=', 1)
+                os.environ[key] = value.strip()
+
 class WeatherEstimator:
-    def get_llm_weather_tips(self, weekly_forecast, model="llama3:8b", host="http://localhost:11434"):
-        """
-        Use local LLM (Ollama) to provide farming tips based on the weekly weather forecast.
-        Returns a string of advice/tips.
-        """
-        if not weekly_forecast:
-            return "No forecast data available for tips."
-        try:
-            import requests
-            import json
-            prompt = (
-                "You are an agricultural expert. Based on the following 7-day weather forecast, provide practical tips for farmers in India. "
-                "Focus on irrigation, disease prevention, crop protection, and any weather-related risks.\n"
-                f"Forecast: {json.dumps(weekly_forecast, ensure_ascii=False, indent=2)}\n"
-                "Tips:"
-            )
-            url = f"{host}/api/generate"
-            payload = {
-                "model": model,
-                "prompt": prompt,
-                "stream": False
-            }
-            response = requests.post(url, json=payload, timeout=60)
-            response.raise_for_status()
-            llm_response = response.json().get("response", "")
-            return llm_response.strip()
-        except Exception as e:
-            return f"[LLM error: {e}]"
-    def fetch_weekly_forecast(self, location):
-        """
-        Fetch 7-day weather forecast for the given location using OpenWeatherMap One Call API.
-        Returns a list of daily forecasts (date, temperature, humidity, rainfall, wind, advice).
-        """
-        if not self.openweather_api_key or not location:
-            return None
-        # Get lat/lon for location
-        try:
-            geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={location}&limit=1&appid={self.openweather_api_key}"
-            geo_resp = requests.get(geo_url, timeout=5)
-            if geo_resp.status_code == 200 and geo_resp.json():
-                geo = geo_resp.json()[0]
-                lat, lon = geo['lat'], geo['lon']
-            else:
-                return None
-            # Fetch 7-day forecast
-            url = f"https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&exclude=current,minutely,hourly,alerts&units=metric&appid={self.openweather_api_key}"
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                daily = data.get('daily', [])
-                forecast = []
-                for day in daily[:7]:
-                    dt = datetime.fromtimestamp(day['dt']).strftime('%Y-%m-%d')
-                    temp = day['temp']['day']
-                    humidity = day['humidity']
-                    rainfall = day.get('rain', 0)
-                    wind = f"{day.get('wind_speed', 'N/A')} m/s"
-                    weather_desc = day.get('weather', [{}])[0].get('description', '')
-                    forecast.append({
-                        "date": dt,
-                        "temperature": temp,
-                        "humidity": humidity,
-                        "rainfall": rainfall,
-                        "wind": wind,
-                        "advice": weather_desc.capitalize()
-                    })
-                return forecast
-        except Exception as e:
-            print(f"Weekly forecast error: {e}")
-        return None
-    def get_current_location(self):
-        """
-        Get current location (city) using IP geolocation API (ipinfo.io).
-        Returns city name or None if not available.
-        """
-        try:
-            resp = requests.get("https://ipinfo.io/json", timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return data.get("city")
-        except Exception as e:
-            print(f"IP geolocation error: {e}")
-        return None
-    def __init__(self, api_key=None, openweather_api_key=None):
+    def __init__(self, openweather_api_key=None):
+        """Initialize with OpenWeatherMap API key and load offline patterns."""
+        self.openweather_api_key = openweather_api_key or os.environ.get('OPENWEATHER_API_KEY')
         self.patterns = self.load_patterns()
         self.default = {
             "temperature": 30,
@@ -102,63 +31,10 @@ class WeatherEstimator:
             "advice": "Monitor local conditions.",
             "warnings": []
         }
-        self.api_key = api_key or os.environ.get('WEATHERAPI_KEY')
-        self.openweather_api_key = openweather_api_key or os.environ.get('OPENWEATHER_API_KEY')
-    def fetch_openweather(self, location):
-        """
-        Fetch real weather data from OpenWeatherMap (https://openweathermap.org/api)
-        Returns a dict with temperature, humidity, rainfall, wind, etc.
-        """
-        if not self.openweather_api_key or not location:
-            return None
-        try:
-            url = f"https://api.openweathermap.org/data/2.5/weather?q={location}&appid={self.openweather_api_key}&units=metric"
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                main = data.get('main', {})
-                wind = data.get('wind', {})
-                rain = data.get('rain', {})
-                weather_desc = data.get('weather', [{}])[0].get('description', '')
-                return {
-                    "temperature": main.get('temp'),
-                    "humidity": main.get('humidity'),
-                    "rainfall": rain.get('1h', 0),
-                    "wind": f"{wind.get('speed', 'N/A')} m/s {wind.get('deg', '')}",
-                    "advice": f"{weather_desc.capitalize()}. Monitor local weather conditions.",
-                    "warnings": []
-                }
-        except Exception as e:
-            print(f"OpenWeatherMap error: {e}")
-        return None
-    def fetch_online_weather(self, location):
-        """
-        Fetch real weather data from WeatherAPI (https://www.weatherapi.com/)
-        Returns a dict with temperature, humidity, rainfall, wind, etc.
-        """
-        if not self.api_key or not location:
-            return None
-        try:
-            url = f"http://api.weatherapi.com/v1/current.json?key={self.api_key}&q={location}"
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                current = data.get('current', {})
-                return {
-                    "temperature": current.get('temp_c'),
-                    "humidity": current.get('humidity'),
-                    "rainfall": current.get('precip_mm'),
-                    "wind": f"{current.get('wind_kph', 'N/A')} kph {current.get('wind_dir', '')}",
-                    "advice": "Monitor local weather conditions.",
-                    "warnings": []
-                }
-        except Exception as e:
-            print(f"WeatherAPI error: {e}")
-        return None
 
     def load_patterns(self):
+        """Load offline weather patterns from JSON or return defaults."""
         if not os.path.exists(WEATHER_FILE):
-            # Default patterns for demonstration
             return {
                 "summer": {"temperature": 35, "humidity": 40, "rainfall": 10, "wind": "Light breeze", "advice": "Irrigate crops frequently.", "warnings": ["Heat stress possible"]},
                 "monsoon": {"temperature": 28, "humidity": 80, "rainfall": 200, "wind": "Gusty", "advice": "Monitor for fungal diseases.", "warnings": ["Waterlogging risk"]},
@@ -167,20 +43,74 @@ class WeatherEstimator:
         with open(WEATHER_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
 
-    def estimate(self, season=None, location=None, crop=None, date=None, use_online=True, prefer_openweather=True):
-        """
-        Estimate weather for a given season, location, crop, or date.
-        - season: 'summer', 'monsoon', 'winter', etc.
-        - location: string (optional, for future expansion)
-        - crop: string (optional, gives crop-specific advice)
-        - date: datetime/date (optional, for daily forecast)
-        - use_online: bool, if True and API key is set, try to fetch real data
-        """
-        # Try OpenWeatherMap first if enabled and preferred
-        if use_online and self.openweather_api_key and location and prefer_openweather:
-            online = self.fetch_openweather(location)
-            if online:
-                pattern = online.copy()
+    def get_current_location(self):
+        """Get city name using IP geolocation (ipinfo.io)."""
+        try:
+            resp = requests.get("https://ipinfo.io/json", timeout=5)
+            resp.raise_for_status()
+            return resp.json().get("city")
+        except Exception as e:
+            print(f"IP geolocation error: {e}")
+            return None
+
+    def fetch_openweather(self, location):
+        """Fetch current weather data from OpenWeatherMap."""
+        if not self.openweather_api_key or not location:
+            return None
+        try:
+            url = f"https://api.openweathermap.org/data/2.5/weather?q={location}&appid={self.openweather_api_key}&units=metric"
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
+            main = data.get('main', {})
+            wind = data.get('wind', {})
+            rain = data.get('rain', {})
+            weather_desc = data.get('weather', [{}])[0].get('description', '')
+            return {
+                "temperature": main.get('temp', None),
+                "humidity": main.get('humidity', None),
+                "rainfall": rain.get('1h', 0),
+                "wind": f"{wind.get('speed', 'N/A')} m/s {wind.get('deg', '')}",
+                "advice": f"{weather_desc.capitalize()}. Monitor local weather conditions.",
+                "warnings": []
+            }
+        except Exception as e:
+            print(f"OpenWeatherMap error: {e}")
+            return None
+
+
+    def get_llm_weather_tips(self, weather_data, crop=None, model="llama3:8b", host="http://localhost:11434"):
+        """Generate farming tips using local Llama3:8b model based on weather data."""
+        if not weather_data:
+            return "No weather data available for tips."
+        try:
+            # Prepare prompt with weather data and optional crop
+            prompt = (
+                "You are an agricultural expert for farmers in India. Based on the following weather data, provide practical farming tips "
+                "focusing on irrigation, disease prevention, crop protection, and weather-related risks. "
+                "Keep the response concise, under 200 words, and formatted as a list with actionable advice."
+            )
+            if crop:
+                prompt += f"\nCrop: {crop}"
+            prompt += f"\nWeather Data: {json.dumps(weather_data, ensure_ascii=False, indent=2)}\nTips:"
+            
+            # Call local Llama3:8b via Ollama
+            url = f"{host}/api/generate"
+            payload = {"model": model, "prompt": prompt, "stream": False}
+            response = requests.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+            llm_response = response.json().get("response", "").strip()
+            return llm_response or "No tips generated."
+        except Exception as e:
+            return f"[LLM error: {e}]"
+
+    def estimate(self, season=None, location=None, crop=None, date=None, use_online=True):
+        """Estimate weather for a given season, location, crop, or date."""
+        # Try online data first if enabled
+        if use_online and self.openweather_api_key and location:
+            forecast = self.fetch_openweather(location)
+            if forecast:
+                pattern = forecast.copy()
                 if crop:
                     if crop.lower() in ["rice", "paddy"]:
                         pattern["advice"] += " Rice grows well in wet conditions, but ensure proper drainage."
@@ -189,28 +119,11 @@ class WeatherEstimator:
                     elif crop.lower() in ["tomato"]:
                         pattern["advice"] += " Provide shade to tomato plants during peak heat."
                 return pattern
-        # Try WeatherAPI if enabled and not preferring OpenWeatherMap
-        if use_online and self.api_key and location:
-            online = self.fetch_online_weather(location)
-            if online:
-                pattern = online.copy()
-                if crop:
-                    if crop.lower() in ["rice", "paddy"]:
-                        pattern["advice"] += " Rice grows well in wet conditions, but ensure proper drainage."
-                    elif crop.lower() in ["wheat"]:
-                        pattern["advice"] += " Wheat is sensitive to frost; cover seedlings if needed."
-                    elif crop.lower() in ["tomato"]:
-                        pattern["advice"] += " Provide shade to tomato plants during peak heat."
-                return pattern
-        # Fallback to offline
+
+        # Fallback to offline patterns
         if not season:
-            month = (date.month if date else datetime.now().month)
-            if month in [3,4,5,6]:
-                season = "summer"
-            elif month in [7,8,9,10]:
-                season = "monsoon"
-            else:
-                season = "winter"
+            month = date.month if date else datetime.now().month
+            season = "summer" if month in [3, 4, 5, 6] else "monsoon" if month in [7, 8, 9, 10] else "winter"
         pattern = self.patterns.get(season, self.default.copy())
         if crop:
             pattern = pattern.copy()
@@ -226,10 +139,7 @@ class WeatherEstimator:
         return pattern
 
     def daily_forecast(self, date=None, location=None):
-        """
-        Returns a simple daily forecast for a given date/location.
-        """
-        # For now, just use season logic
+        """Return a daily forecast for a given date/location."""
         return self.estimate(date=date, location=location)
 
 if __name__ == "__main__":
@@ -237,14 +147,13 @@ if __name__ == "__main__":
     location = estimator.get_current_location()
     if location:
         print(f"Detected location: {location}")
-        weekly = estimator.fetch_weekly_forecast(location)
-        if weekly:
-            print(f"7-Day Weather Forecast for {location}:")
-            print(json.dumps(weekly, indent=2, ensure_ascii=False))
-            tips = estimator.get_llm_weather_tips(weekly)
-            print("\nLLM Tips for Farmers:")
-            print(tips)
+        current_weather = estimator.fetch_openweather(location)
+        if current_weather:
+            print(f"Current Weather for {location}:")
+            print(json.dumps(current_weather, indent=2, ensure_ascii=False))
+            print("\nFarming Tips:")
+            print(estimator.get_llm_weather_tips(current_weather))
         else:
-            print("Could not fetch weekly forecast. Check API key or location.")
+            print("Could not fetch weather data. Check API key or location.")
     else:
         print("Could not detect location.")

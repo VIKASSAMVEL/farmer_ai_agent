@@ -422,36 +422,7 @@ class ChatScreen(MDBoxLayout):
         self.language_btn.text = lang_map['🌐 Language']
         self.children[0].children[0].text = lang_map['© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design']
 
-    def input_action(self, instance):
-        if recognize_speech:
-            self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
-            self.state["mode"] = "input"
-        else:
-            self.add_bubble("Voice input not available.", is_user=False)
-
-    def advisory_action(self, instance):
-        if not get_crop_advice:
-            self.add_bubble("Advisory module not available.", is_user=False)
-            return
-        crop_list = ["Tomato", "Rice", "Wheat", "Maize", "Potato", "Onion", "Cotton", "Sugarcane"]
-        self.state["mode"] = "advisory"
-        self.state["context"]["crop_list"] = crop_list
-        self.add_bubble("Select your crop for advisory:", is_user=False)
-        crop_spinner = Spinner(
-            text="Select Crop",
-            values=crop_list,
-            size_hint=(None, None),
-            size=(200, 44),
-            pos_hint={'center_x': 0.5}
-        )
-        def on_crop_select(spinner, text):
-            self.text_input.text = text
-            self.state["mode"] = "advisory_crop"
-            self.chat_history.remove_widget(crop_spinner)
-            self.send_message(None)
-        if hasattr(crop_spinner, 'bind'):
-            crop_spinner.bind(text=on_crop_select) # type: ignore
-        self.chat_history.add_widget(crop_spinner)
+    # Duplicate weather_action removed. The correct implementation remains below.
 
     def calendar_action(self, instance):
         if not CropCalendar or not Reminders:
@@ -474,8 +445,31 @@ class ChatScreen(MDBoxLayout):
         if not WeatherEstimator:
             self.add_bubble("Weather module not available.", is_user=False)
             return
-        self.state["mode"] = "weather_date"
-        self.add_bubble("Enter date (YYYY-MM-DD):", is_user=False)
+        # Show current weather for detected location
+        spinner = MDSpinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        def run_weather():
+            result_bubbles = []
+            try:
+                estimator = WeatherEstimator() # type: ignore
+                location = estimator.get_current_location()
+                if location:
+                    weather = estimator.fetch_openweather(location)
+                    if weather:
+                        tips = estimator.get_llm_weather_tips(weather)
+                        weather_str = f"[b]Current Weather for {location}:[/b]\n" + json.dumps(weather, indent=2, ensure_ascii=False)
+                        combined = f"{weather_str}\n\n[b]Farming Tips:[/b]\n{tips}"
+                        result_bubbles.append((combined, False))
+                    else:
+                        result_bubbles.append(("Could not fetch current weather. Check API key or location.", False))
+                else:
+                    result_bubbles.append(("Could not detect location.", False))
+            except Exception as e:
+                result_bubbles.append((f"Weather error: {str(e)}", False))
+            finally:
+                Clock.schedule_once(lambda dt: self._update_ui(spinner, result_bubbles), 0)
+        threading.Thread(target=run_weather, daemon=True).start()
 
     def translate_action(self, instance):
         if not OfflineTranslator:

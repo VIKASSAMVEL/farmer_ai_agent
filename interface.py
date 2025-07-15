@@ -906,8 +906,7 @@ if __name__ == "__main__":
                         location=self.weather_inputs.get('location'),
                         crop=self.weather_inputs.get('crop'),
                         date=self.weather_inputs.get('date'),
-                        use_online=True,
-                        prefer_openweather=True
+                        use_online=True
                     )
                     self.add_bubble("Weather Estimation:", is_user=False)
                     self.add_bubble(f"Temperature: {weather.get('temperature', 'N/A')}°C", is_user=False)
