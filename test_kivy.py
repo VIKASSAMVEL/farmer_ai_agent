@@ -111,6 +111,9 @@ class ChatScreen(MDBoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.state = {"mode": None, "context": {}}
+        # Define input dropdown container
+        self.input_dropdown = MDBoxLayout(orientation='vertical', size_hint_y=None)
+        self.input_dropdown.bind(minimum_height=self.input_dropdown.setter('height'))
         def get_scaled(val):
             return int(val * Window.width / 800)
 
@@ -147,7 +150,6 @@ class ChatScreen(MDBoxLayout):
             btn = MDRectangleFlatButton(text=mode_name, size_hint_y=None, height=52, md_bg_color=(33/255, 194/255, 94/255, 1), text_color=(1,1,1,1), font_size=18)
             btn.bind(on_release=lambda btn, func=mode_func: self.select_mode(func))
             mode_bar.add_widget(btn)
-        self.mode_btn.bind(on_release=self.mode_dropdown.open)
         mode_bar.add_widget(self.mode_btn)
         self.add_widget(mode_bar)
 
@@ -172,6 +174,11 @@ class ChatScreen(MDBoxLayout):
                 self.rect.pos = self.pos
                 self.rect.size = (self.width, 2)
         self.add_widget(Divider())
+        # Define input options for input type dropdown
+        self.input_options = [
+            ("Text", self.set_input_text),
+            ("Image", self.set_input_image)
+        ]
         # --- Input dropdown (Text, Image) ---
         input_bar = MDBoxLayout(size_hint=(1, 0.12), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)], spacing=get_scaled(12))
         self.input_btn = MDRaisedButton(text="📝 Input Type", size_hint=(None, 1), width=140, md_bg_color=(27/255, 38/255, 59/255, 1), text_color=(1,1,1,1), font_size=get_scaled(18))
@@ -200,7 +207,7 @@ class ChatScreen(MDBoxLayout):
         from kivy.animation import Animation
         # ModernButton without HoverBehavior
         from kivy.uix.behaviors import ButtonBehavior
-        class ModernButton(ButtonBehavior, MDRaisedButton):
+        class ModernButton(MDRaisedButton, ButtonBehavior):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
                 self.md_bg_color = (0.13, 0.76, 0.37, 1)
@@ -214,6 +221,11 @@ class ChatScreen(MDBoxLayout):
             def _update_bg(self, *args):
                 self.bg_rect.pos = self.pos
                 self.bg_rect.size = self.size
+            def on_touch_down(self, touch):
+                # Ensure return type is always bool
+                return bool(super().on_touch_down(touch))
+            def on_touch_move(self, touch, *args):
+                return super().on_touch_move(touch, *args)
         send_btn = ModernButton(text='🚀 Send', size_hint=(0.2, 1))
         send_btn.bind(on_release=self.send_message)
         self.mic_btn = None  # Placeholder for mic button
@@ -309,7 +321,7 @@ class ChatScreen(MDBoxLayout):
         popup = Popup(title='Select Image', content=filechooser, size_hint=(0.9, 0.9), opacity=0)
         def animate_open(*args):
             Animation(opacity=1, d=0.35, t='out_quad').start(popup)
-        popup.bind(on_open=animate_open)
+        # popup.bind(on_open=animate_open)  # Removed: Popup does not have 'on_open' event
         def on_selection(instance, selection):
             if selection:
                 self.state['selected_image'] = selection[0]
@@ -318,7 +330,7 @@ class ChatScreen(MDBoxLayout):
                     popup.dismiss()
                     self.handle_image_input(selection[0])
                 Animation(opacity=0, d=0.25, t='out_quad').bind(on_complete=close_popup)
-        filechooser.bind(selection=on_selection)
+        filechooser.bind(selection=on_selection) # type: ignore
         popup.open()
 
     def handle_image_input(self, image_path):
@@ -467,7 +479,7 @@ class ChatScreen(MDBoxLayout):
         def run_weather():
             result_bubbles = []
             try:
-                estimator = WeatherEstimator()
+                estimator = WeatherEstimator() # type: ignore
                 location = estimator.get_current_location()
                 if location:
                     result_bubbles.append((f"Detected location: {location}", False))
@@ -518,7 +530,7 @@ class ChatScreen(MDBoxLayout):
         def run_analytics():
             result_bubbles = []
             try:
-                analytics = Analytics()
+                analytics = Analytics() # type: ignore
                 result_bubbles.append(("User Activity Summary:", False))
                 result_bubbles.append((json.dumps(analytics.user_activity_summary('default'), indent=2, ensure_ascii=False), False))
                 result_bubbles.append(("Crop Trends:", False))
@@ -544,7 +556,7 @@ class ChatScreen(MDBoxLayout):
                 import contextlib
                 buf = io.StringIO()
                 with contextlib.redirect_stdout(buf):
-                    list_voices()
+                    list_voices() # type: ignore
                 voices = buf.getvalue()
                 result_bubbles.append(("Available TTS Voices:", False))
                 result_bubbles.append((voices, False))
@@ -686,7 +698,7 @@ class ChatScreen(MDBoxLayout):
                     result_bubbles = []
                     try:
                         crop = user_text.strip()
-                        advice = get_crop_advice(crop)
+                        advice = get_crop_advice(crop) # type: ignore
                         result_bubbles.append(("=== STRUCTURED ADVISORY ===", False))
                         result_bubbles.append((json.dumps(advice, indent=2, ensure_ascii=False), False))
                         result_bubbles.append(("=== FORMATTED ADVISORY ===", False))
@@ -723,7 +735,7 @@ class ChatScreen(MDBoxLayout):
                 def run_faq():
                     result_bubbles = []
                     try:
-                        faq = FAQ()
+                        faq = FAQ() # type: ignore
                         results = faq.search(user_text, use_llm=True)
                         if results:
                             answer = results[0].get('answer', '')
@@ -751,7 +763,7 @@ class ChatScreen(MDBoxLayout):
                 def run_translate():
                     result_bubbles = []
                     try:
-                        translator = OfflineTranslator()
+                        translator = OfflineTranslator() # type: ignore
                         translated = translator.translate(self.state["context"]["translate_text"], "en", tgt_lang)
                         if translated.startswith("[Error]"):
                             result_bubbles.append((f"Translation failed: {translated}", False))
@@ -885,11 +897,13 @@ class ChatScreen(MDBoxLayout):
                 return
             if not self.is_recording:
                 self.is_recording = True
-                self.mic_btn.text = "⏹ Stop Mic"
+                if self.mic_btn:
+                    self.mic_btn.text = "⏹ Stop Mic"
                 self.add_bubble("Recording... Please speak into the mic. Click again to stop.", is_user=False)
             else:
                 self.is_recording = False
-                self.mic_btn.text = "🎤 Mic"
+                if self.mic_btn:
+                    self.mic_btn.text = "🎤 Mic"
                 try:
                     # Only transcribe after stopping
                     text = recognize_speech(source='mic', lang='en')
@@ -909,8 +923,8 @@ class ChatScreen(MDBoxLayout):
         option = user_text.strip()
         try:
             if not hasattr(self, 'calendar') or not hasattr(self, 'reminders'):
-                self.calendar = CropCalendar()
-                self.reminders = Reminders()
+                self.calendar = CropCalendar() # type: ignore
+                self.reminders = Reminders() # type: ignore
             if option == "1":
                 self.add_bubble("Enter crop name:", is_user=False)
                 self.state["mode"] = "calendar_crop"
