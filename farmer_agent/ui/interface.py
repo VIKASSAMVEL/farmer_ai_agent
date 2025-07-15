@@ -106,29 +106,18 @@ class ChatScreen(BoxLayout):
             "Calendar": IOSButton(text="Calendar", on_press=self.calendar_action),
             "FAQ": IOSButton(text="FAQ", on_press=self.faq_action),
             "Weather": IOSButton(text="Weather", on_press=self.weather_action),
+            "Translate": IOSButton(text="Translate", on_press=self.translate_action),
             "Analytics": IOSButton(text="Analytics", on_press=self.analytics_action),
             "TTS Voices": IOSButton(text="TTS Voices", on_press=self.tts_voices_action),
-            "Exit": IOSButton(text="Exit", on_press=self.exit_action),
+            "Exit": IOSButton(text="Exit", on_press=self.exit_action)
         }
-            "Translate": IOSButton(text="Translate", on_press=self.translate_action),
-    def translate_action(self, instance):
-        self.add_bubble("Enter text to translate:", is_user=False)
-        self.awaiting_translate_text = True
-            elif hasattr(self, 'awaiting_translate_text') and self.awaiting_translate_text:
-                self._translate_text = user_text.strip()
-                self.add_bubble("Enter target language code (e.g., hi for Hindi):", is_user=False)
-                self.awaiting_translate_lang = True
-                self.awaiting_translate_text = False
-            elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
-                tgt_lang = user_text.strip() or "hi"
-                from nlp.translate import OfflineTranslator
-                translator = OfflineTranslator()
-                translated = translator.translate(self._translate_text)
-                self.add_bubble(f"Translation: {translated}", is_user=False)
-                self.awaiting_translate_lang = False
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
         self.add_widget(feature_layout)
+
+    def translate_action(self, instance):
+        self.add_bubble("Enter text to translate:", is_user=False)
+        self.awaiting_translate_text = True
     def input_action(self, instance):
         self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
         self.awaiting_input_mode = True

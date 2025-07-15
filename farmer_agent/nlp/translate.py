@@ -1,6 +1,7 @@
-# Offline Translation for Regional Indian Languages using IndicTrans
-# To expand language support, download the latest IndicTrans model from Hugging Face.
-# Supported languages: Hindi (hi), Tamil (ta), Telugu (te), Bengali (bn), Marathi (mr), Gujarati (gu), Kannada (kn), Malayalam (ml), Punjabi (pa), Oriya (or), Assamese (as), Urdu (ur), English (en), and more.
+
+# Offline Translation for Regional Indian Languages using MarianMT
+# To expand language support, use MarianMT models from Hugging Face.
+# Supported languages: Hindi (hi), Tamil (ta), Telugu (te), Kannada (kn), Malayalam (ml), English (en), and more.
 # Example usage: translator.translate(text, src_lang, tgt_lang)
 import sys
 try:
@@ -10,46 +11,91 @@ except ImportError:
     sys.exit(1)
 
 
-# Default to a public Hugging Face translation model (English-Hindi as example)
-DEFAULT_MODEL = "Helsinki-NLP/opus-mt-en-hi"
+# Use MarianMT for Hindi and Malayalam, IndicTrans2 for Tamil, Telugu, Kannada, Malayalam
+MARIAN_MODELS = {
+    ("en", "hi"): "Helsinki-NLP/opus-mt-en-hi",
+    ("hi", "en"): "Helsinki-NLP/opus-mt-hi-en",
+    ("en", "ml"): "Helsinki-NLP/opus-mt-en-ml",
+    ("ml", "en"): "Helsinki-NLP/opus-mt-ml-en",
+}
+
+INDICTRANS2_MODEL = "ai4bharat/indictrans2-en-indic-1B"
+
+# Default to English-Hindi
+DEFAULT_MODEL = MARIAN_MODELS[("en", "hi")]
+
 
 
 class OfflineTranslator:
-    def __init__(self, model_name=DEFAULT_MODEL):
-        self.model_name = model_name
+    def __init__(self, model_name=None):
+        self.model_name = model_name or DEFAULT_MODEL
+        self.tokenizer = None
+        self.model = None
+        self._load_model(self.model_name)
+
+    def _load_model(self, model_name):
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+            trust_remote = False
+            if model_name == INDICTRANS2_MODEL:
+                trust_remote = True
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=trust_remote)
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, trust_remote_code=trust_remote)
+            self.model_name = model_name
         except Exception as e:
             print(f"[Error] Could not load model '{model_name}': {e}")
             self.tokenizer = None
             self.model = None
 
-    def translate(self, text, src_lang=None, tgt_lang=None):
+    def translate(self, text, src_lang="en", tgt_lang="hi"):
         """
-        Translate text from src_lang to tgt_lang. For Helsinki-NLP models, src_lang/tgt_lang are inferred from model name.
+        Translate text from src_lang to tgt_lang. Uses MarianMT for Hindi/Malayalam, IndicTrans2 for Tamil, Telugu, Kannada, Malayalam.
         """
-        if not self.tokenizer or not self.model:
-            return "[Error] Translation model not loaded."
-        try:
-            # For Helsinki-NLP models, just input the text
-            inputs = self.tokenizer(text, return_tensors="pt")
-            outputs = self.model.generate(**inputs)
-            return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        except Exception as e:
-            return f"[Error] Translation failed: {e}"
+        indic_langs = {"ta", "te", "kn", "ml"}
+        if (src_lang in indic_langs or tgt_lang in indic_langs) and not ((src_lang, tgt_lang) in MARIAN_MODELS):
+            # Use IndicTrans2 for these pairs
+            if self.model_name != INDICTRANS2_MODEL:
+                self._load_model(INDICTRANS2_MODEL)
+            if not self.tokenizer or not self.model:
+                return "[Error] Translation model not loaded."
+            try:
+                # IndicTrans2 expects a special format: <2xx> at the start of the input for target lang
+                tgt_prefix = f"<2{tgt_lang}> "
+                input_text = tgt_prefix + text
+                inputs = self.tokenizer(input_text, return_tensors="pt")
+                outputs = self.model.generate(**inputs)
+                return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            except Exception as e:
+                return f"[Error] Translation failed: {e}"
+        else:
+            # Use MarianMT for Hindi/Malayalam
+            model_key = (src_lang, tgt_lang)
+            model_name = MARIAN_MODELS.get(model_key)
+            if not model_name:
+                return f"[Error] No model for {src_lang} to {tgt_lang}."
+            if self.model_name != model_name:
+                self._load_model(model_name)
+            if not self.tokenizer or not self.model:
+                return "[Error] Translation model not loaded."
+            try:
+                inputs = self.tokenizer(text, return_tensors="pt")
+                outputs = self.model.generate(**inputs)
+                return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            except Exception as e:
+                return f"[Error] Translation failed: {e}"
 
     def supported_languages(self):
-        # For Helsinki-NLP/opus-mt-en-hi, only en <-> hi
-        if "en-hi" in self.model_name:
-            return ["en", "hi"]
-        # Add more logic for other models if needed
-        return ["en", "hi"]
+        # All supported language codes
+        return ["en", "hi", "ta", "te", "kn", "ml"]
+
 
 
 if __name__ == "__main__":
-    print("OfflineTranslator demo (using Helsinki-NLP/opus-mt-en-hi)")
+    print("OfflineTranslator demo (MarianMT + IndicTrans2)")
     translator = OfflineTranslator()
     print("Supported languages:", translator.supported_languages())
     src = "Hello farmer"
-    print("English to Hindi:", translator.translate(src))
+    print("English to Hindi:", translator.translate(src, "en", "hi"))
+    print("English to Tamil:", translator.translate(src, "en", "ta"))
+    print("English to Telugu:", translator.translate(src, "en", "te"))
+    print("English to Kannada:", translator.translate(src, "en", "kn"))
+    print("English to Malayalam:", translator.translate(src, "en", "ml"))
