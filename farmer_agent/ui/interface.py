@@ -8,6 +8,8 @@ from kivy.uix.label import Label
 from kivy.uix.gridlayout import GridLayout
 
 import sys
+import os
+from utils.env_loader import load_env_local
 sys.path.append('..')
 try:
     from advisory.advisor import get_crop_advice
@@ -172,17 +174,6 @@ class ChatScreen(BoxLayout):
 
     def weather_action(self, instance):
         if WeatherEstimator:
-            # Load OpenWeatherMap API key from env.local or environment
-            import os
-            def load_env_local():
-                env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'env.local')
-                if os.path.exists(env_path):
-                    with open(env_path, 'r', encoding='utf-8') as f:
-                        for line in f:
-                            if line.strip() and not line.strip().startswith('#'):
-                                k, sep, v = line.partition('=')
-                                if sep:
-                                    os.environ[k.strip()] = v.strip()
             load_env_local()
             self._openweather_api_key = os.environ.get('OPENWEATHER_API_KEY')
             self.weather_inputs = {}
