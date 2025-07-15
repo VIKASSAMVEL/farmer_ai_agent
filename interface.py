@@ -1,223 +1,95 @@
-from kivy.uix.button import Button as KivyButton
-from kivy.graphics import Color, RoundedRectangle
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.textinput import TextInput
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.gridlayout import GridLayout
 
-import sys
 import os
-# Ensure project root is in sys.path for all imports
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
 
-from utils.env_loader import load_env_local
-try:
-    from advisory.advisor import get_crop_advice
-    from data.faq import FAQ
-    from data.weather import WeatherEstimator
-    from data.crop_calendar import CropCalendar, Reminders
-    from nlp.stt import recognize_speech
-    from nlp.tts import speak, list_voices
-    from nlp.translate import OfflineTranslator
-    from nlp.plant_cv import PlantIdentifier
-    from utils.file_utils import load_json
-    from data.user_profile import UserManager
-    from data.analytics import Analytics
-    from utils.accessibility import Accessibility
-except Exception as e:
-    print("Import error in interface.py:", e)
-    get_crop_advice = None
-    FAQ = None
-    WeatherEstimator = None
-    CropCalendar = None
-    Reminders = None
-    recognize_speech = None
-    speak = None
-    list_voices = None
-    OfflineTranslator = None
-    PlantIdentifier = None
-    load_json = None
-    UserManager = None
-    Analytics = None
-    Accessibility = None
-
-# --- Custom iOS-style Button ---
-class IOSButton(KivyButton):
-    def __init__(self, **kwargs):
-        super(IOSButton, self).__init__(**kwargs)
-        self.background_normal = ''
-        self.background_color = (0, 0, 0, 0)
-        self.color = (1, 1, 1, 1)
-        self.font_size = 16
-        self.size_hint = (None, None)
-        self.size = (120, 40)
-        self.radius = [20]
-        # Ensure bind is called from the Kivy Button base class
-        KivyButton.bind(self, pos=self.update_canvas, size=self.update_canvas)  # type: ignore
-        with self.canvas.before:  # type: ignore
-            Color(0.1, 0.1, 0.1, 1)
-            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=self.radius)
-
-    def update_canvas(self, *args):
-        self.rect.pos = self.pos
-        self.rect.size = self.size
-
-# --- Chat Bubble ---
+# --- ChatBubble for chat display ---
+from kivy.uix.label import Label
 class ChatBubble(Label):
     def __init__(self, text, is_user=False, **kwargs):
         super().__init__(**kwargs)
         self.text = text
         self.size_hint_y = None
-        self.height = self.texture_size[1] + 20
+        self.height = 40
         self.halign = 'right' if is_user else 'left'
         self.valign = 'middle'
-        self.padding = (10, 10)
         self.color = (1, 1, 1, 1) if is_user else (0.9, 0.9, 0.9, 1)
         self.text_size = (600, None)
         self.markup = True
 
-# --- Main Chat Screen ---
+# --- REWRITTEN KIVY GUI TO MIRROR main.py LOGIC WITH DEBUGGER ---
+import traceback
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.popup import Popup
+from kivy.uix.spinner import Spinner
+
+# Import all backend modules with error handling
+try:  # Temporarily comment out for deeper debugging
+    from farmer_agent.advisory.advisor import get_crop_advice
+    from farmer_agent.data.faq import FAQ
+    from farmer_agent.data.weather import WeatherEstimator
+    from farmer_agent.data.crop_calendar import CropCalendar, Reminders
+    from farmer_agent.nlp.stt import recognize_speech
+    from farmer_agent.nlp.tts import speak, list_voices
+    from farmer_agent.nlp.translate import OfflineTranslator
+    from farmer_agent.nlp.plant_cv import PlantIdentifier
+    from farmer_agent.utils.file_utils import load_json
+    from farmer_agent.data.user_profile import UserManager
+    from farmer_agent.data.analytics import Analytics
+    from farmer_agent.utils.env_loader import load_env_local
+except Exception as e: # Temporarily comment out for deeper debugging
+    get_crop_advice = FAQ = WeatherEstimator = CropCalendar = Reminders = recognize_speech = speak = list_voices = OfflineTranslator = PlantIdentifier = load_json = UserManager = Analytics = load_env_local = None
+
+def show_debug_popup(error_msg):
+    content = BoxLayout(orientation='vertical')
+    label = Label(text=error_msg, size_hint_y=None, height=400)
+    btn = Button(text='Close', size_hint_y=None, height=40)
+    content.add_widget(label)
+    content.add_widget(btn)
+    popup = Popup(title='Debugger - Error Traceback', content=content, size_hint=(0.9, 0.7))
+    btn.bind(on_release=popup.dismiss)
+    popup.open()
+
 class ChatScreen(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        # Initialize user_manager for user profile/history features
-        try:
-            from data.user_profile import UserManager
-            self.user_manager = UserManager()
-            # Optionally, set a default user or prompt for user selection here
-            users = self.user_manager.list_users()
-            if users:
-                self.user_manager.switch_user(users[0])
-            else:
-                self.user_manager.add_user('default')
-                self.user_manager.switch_user('default')
-        except Exception as e:
-            self.user_manager = None
-            print(f"UserManager init error: {e}")
-
-        # --- Chat history area ---
+        # Chat history area
         self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
-        self.chat_history.bind(minimum_height=self.chat_history.setter('height'))  # type: ignore
-        self.scroll = ScrollView(size_hint=(1, 0.73))
+        self.chat_history.bind(minimum_height=self.chat_history.setter('height')) # Fix: Use bind for height
+        self.scroll = ScrollView(size_hint=(1, 0.7))
         self.scroll.add_widget(self.chat_history)
         self.add_widget(self.scroll)
-
-        # --- Input area ---
-        input_layout = BoxLayout(size_hint=(1, 0.15))
+        # Input area
+        input_layout = BoxLayout(size_hint=(1, 0.1))
         self.text_input = TextInput(size_hint=(0.8, 1), multiline=False)
-        send_btn = IOSButton(text='Send', size_hint=(0.2, 1))
-        send_btn.bind(on_press=self.send_message) # type: ignore
+        send_btn = Button(text='Send', size_hint=(0.2, 1))
+        send_btn.bind(on_release=self.send_message)
         input_layout.add_widget(self.text_input)
         input_layout.add_widget(send_btn)
         self.add_widget(input_layout)
-
-        # --- Feature Buttons (iOS style, horizontal) ---
-        feature_layout = BoxLayout(size_hint=(1, 0.12), spacing=8, padding=[8, 8, 8, 0])
+        # Feature buttons
+        feature_layout = BoxLayout(size_hint=(1, 0.2), spacing=8, padding=[8, 8, 8, 0])
         self.feature_buttons = {
-            "Input": IOSButton(text="Input", on_press=self.input_action),
-            "Advisory": IOSButton(text="Advisory", on_press=self.advisory_action),
-            "Calendar": IOSButton(text="Calendar", on_press=self.calendar_action),
-            "FAQ": IOSButton(text="FAQ", on_press=self.faq_action),
-            "Weather": IOSButton(text="Weather", on_press=self.weather_action),
-            "Translate": IOSButton(text="Translate", on_press=self.translate_action),
-            "Analytics": IOSButton(text="Analytics", on_press=self.analytics_action),
-            "TTS Voices": IOSButton(text="TTS Voices", on_press=self.tts_voices_action),
-            "Clear History": IOSButton(text="Clear History", on_press=self.clear_history_action),
-            "Exit": IOSButton(text="Exit", on_press=self.exit_action)
+            "Input": Button(text="Input", on_press=self.input_action),
+            "Advisory": Button(text="Advisory", on_press=self.advisory_action),
+            "Calendar": Button(text="Calendar", on_press=self.calendar_action),
+            "FAQ": Button(text="FAQ", on_press=self.faq_action),
+            "Weather": Button(text="Weather", on_press=self.weather_action),
+            "Translate": Button(text="Translate", on_press=self.translate_action),
+            "Analytics": Button(text="Analytics", on_press=self.analytics_action),
+            "TTS Voices": Button(text="TTS Voices", on_press=self.tts_voices_action),
+            "Clear History": Button(text="Clear History", on_press=self.clear_history_action), # Fix Indentation
+            "Exit": Button(text="Exit", on_press=self.exit_action)
         }
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
         self.add_widget(feature_layout)
-    def clear_history_action(self, instance):
-        try:
-            if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
-                self.user_manager.current_user.clear_history()
-                self.add_bubble("User history cleared.", is_user=False)
-            else:
-                self.add_bubble("User profile not loaded.", is_user=False)
-        except Exception as e:
-            self.add_bubble(f"Error clearing history: {e}", is_user=False)
-    def show_user_profile_info(self):
-        if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
-            last_adv = self.user_manager.current_user.get_last_advisory()
-            all_q = self.user_manager.current_user.get_all_queries()
-            meta = self.user_manager.current_user.get_metadata()
-            self.add_bubble(f"Last advisory: {last_adv}", is_user=False)
-            self.add_bubble(f"All queries: {all_q}", is_user=False)
-            self.add_bubble(f"User metadata: {meta}", is_user=False)
-
-    def translate_action(self, instance):
-        self.add_bubble("Enter text to translate:", is_user=False)
-        self.awaiting_translate_text = True
-
-    def input_action(self, instance):
-        self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
-        # Add a mic button for STT
-        if not hasattr(self, 'mic_button'):
-            from kivy.uix.button import Button
-            self.mic_button = Button(text="🎤 Start Recording", size_hint=(None, None), size=(180, 50))
-            self.mic_button.bind(on_press=self.toggle_mic_recording)
-            self.add_widget(self.mic_button)
-        self.awaiting_input_mode = True
-
-    def toggle_mic_recording(self, instance):
-        if not hasattr(self, '_is_recording') or not self._is_recording:
-            self._is_recording = True
-            self.mic_button.text = "⏹️ Stop Recording"
-            self.add_bubble("Recording... Press the mic button again to stop.", is_user=False)
-            import threading
-            self._stop_flag = False
-            def stop_callback():
-                return self._stop_flag
-            def record_and_transcribe():
-                from nlp.stt import recognize_speech
-                result = recognize_speech(source="mic", stop_callback=stop_callback)
-                self.add_bubble(f"Recognized Text: {result['text']}", is_user=False)
-                if result['language']:
-                    self.add_bubble(f"Detected Language: {result['language']}", is_user=False)
-                self._is_recording = False
-                self.mic_button.text = "🎤 Start Recording"
-            self._record_thread = threading.Thread(target=record_and_transcribe)
-            self._record_thread.start()
-        else:
-            self._stop_flag = True
-            self.mic_button.text = "🎤 Start Recording"
-
-    def tts_voices_action(self, instance):
-        if list_voices:
-            import io
-            import contextlib
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                list_voices()
-            voices = buf.getvalue()
-            self.add_bubble("Available TTS Voices:", is_user=False)
-            self.add_bubble(voices, is_user=False)
-        else:
-            self.add_bubble("TTS Voices module not available.", is_user=False)
-
-        # --- Chat history area ---
-        self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
-        self.chat_history.bind(minimum_height=self.chat_history.setter('height'))  # type: ignore
-        self.scroll = ScrollView(size_hint=(1, 0.73))
-        self.scroll.add_widget(self.chat_history)
-        self.add_widget(self.scroll)
-
-        # --- Input area ---
-        input_layout = BoxLayout(size_hint=(1, 0.15))
-        self.text_input = TextInput(size_hint=(0.8, 1), multiline=False)
-        send_btn = IOSButton(text='Send', size_hint=(0.2, 1))
-        send_btn.bind(on_press=self.send_message) # type: ignore
-        input_layout.add_widget(self.text_input)
-        input_layout.add_widget(send_btn)
-        self.add_widget(input_layout)
-
-        # --- State flags ---
+        # State flags
         self.awaiting_advisory = False
         self.awaiting_faq = False
         self.awaiting_weather = False
@@ -228,31 +100,150 @@ class ChatScreen(BoxLayout):
         self.awaiting_add_reminder = False
         self.awaiting_reminder_activity = False
         self.awaiting_reminder_days = False
-        self.awaiting_analytics = False
+        self.awaiting_translate_text = False
+        self.awaiting_translate_lang = False
+        # User manager
+        if load_env_local:
+            load_env_local() # Load environment variables at startup
+        try:
+            self.user_manager = UserManager() if UserManager else None
+            if self.user_manager:
+                users = self.user_manager.list_users()
+                if users:
+                    self.user_manager.switch_user(users[0])
+                else:
+                    self.user_manager.add_user('default')
+                    self.user_manager.switch_user('default')
+        except Exception as e:
+            self.user_manager = None  # Let it crash to debug
+            self.add_bubble(f"UserManager init error: {e}", is_user=False)
 
-    # --- Feature Actions ---
+    def add_bubble(self, text, is_user=False):
+        bubble = Label(text=text, size_hint_y=None, height=40, halign='right' if is_user else 'left', valign='middle')
+        self.chat_history.add_widget(bubble)
+        self.chat_history.height = self.chat_history.minimum_height
+        self.scroll.scroll_y = 0
+
+    # --- Feature Actions (map CLI menu to GUI buttons) ---
+    def input_action(self, instance):
+        self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
+        # You can add mic button logic here as in previous versions
     def advisory_action(self, instance):
         self.add_bubble("Please enter your crop name for advisory:", is_user=False)
         self.awaiting_advisory = True
-        self.show_user_profile_info()
-
-
+    def calendar_action(self, instance):
+        self.add_bubble("Calendar feature coming soon!", is_user=False)
     def faq_action(self, instance):
-        if FAQ:
-            self.add_bubble("Please enter your question or keyword for FAQ:", is_user=False)
-            self.awaiting_faq = True
-        else:
-            self.add_bubble("FAQ module not available.", is_user=False)
-
+        self.add_bubble("Please enter your question or keyword for FAQ:", is_user=False)
+        self.awaiting_faq = True
     def weather_action(self, instance):
-        if WeatherEstimator:
-            load_env_local()
-            self._openweather_api_key = os.environ.get('OPENWEATHER_API_KEY')
-            self.weather_inputs = {}
-            self.add_bubble("Enter season (summer/monsoon/winter, blank for auto):", is_user=False)
-            self.awaiting_weather_season = True
-        else:
-            self.add_bubble("Weather module not available.", is_user=False)
+        self.add_bubble("Weather feature coming soon!", is_user=False)
+    def translate_action(self, instance):
+        self.add_bubble("Enter text to translate from English:", is_user=False)
+        self.awaiting_translate_text = True
+    def analytics_action(self, instance):
+        self.add_bubble("Analytics feature coming soon!", is_user=False)
+    def tts_voices_action(self, instance):
+        try:
+            if list_voices:
+                import io
+                import contextlib
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    list_voices()
+                voices = buf.getvalue()
+                self.add_bubble("Available TTS Voices:", is_user=False)
+                self.add_bubble(voices, is_user=False)
+            else:
+                self.add_bubble("TTS Voices module not available.", is_user=False)
+        except Exception as e:
+            show_debug_popup(traceback.format_exc())
+    def clear_history_action(self, instance):
+        try:
+            if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
+                self.user_manager.current_user.clear_history()
+                self.add_bubble("User history cleared.", is_user=False)
+            else:
+                self.add_bubble("User profile not loaded.", is_user=False)
+        except Exception as e:
+            show_debug_popup(traceback.format_exc())
+    def exit_action(self, instance):
+        self.add_bubble("Goodbye! Close the window to exit.", is_user=False)
+
+    # --- Main Message Handler ---
+    def send_message(self, instance):
+        user_text = self.text_input.text.strip()
+        if not user_text:
+            return
+        self.add_bubble(user_text, is_user=True)
+        try:
+            # Show loading indicator
+            self.add_bubble("Waiting for response...", is_user=False)
+            spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+            self.chat_history.add_widget(spinner)
+            self.text_input.disabled = True  # Disable input field
+
+            # Schedule backend call
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda dt: self.perform_backend_task(user_text, spinner), 0)  # Call in the next frame
+        except Exception as e:
+            show_debug_popup(traceback.format_exc())
+        self.text_input.text = ''
+
+    def perform_backend_task(self, user_text, spinner):
+        try:
+            if self.awaiting_advisory:
+                if get_crop_advice:
+                    crop = user_text.strip()
+                    advice = get_crop_advice(crop)
+                    self.add_bubble("=== STRUCTURED ADVISORY ===", is_user=False)
+                    import json
+                    self.add_bubble(json.dumps(advice, indent=2, ensure_ascii=False), is_user=False)
+                    self.add_bubble("=== FORMATTED ADVISORY ===", is_user=False)
+                    self.add_bubble(advice['formatted'], is_user=False)
+                #else:
+                #    response_text = "Advisory module not available."
+                self.awaiting_advisory = False
+            elif self.awaiting_faq:                
+                if FAQ:
+                    faq = FAQ()
+                    results = faq.search(user_text)
+                    self.add_bubble(f"FAQ Results for '{user_text}':", is_user=False)
+                    import json
+                    self.add_bubble(json.dumps(results, indent=2, ensure_ascii=False), is_user=False)
+                else:
+                    self.add_bubble("FAQ module not available.", is_user=False)
+                self.awaiting_faq = False
+            elif self.awaiting_translate_text:
+                self._translate_text = user_text.strip()
+                self.add_bubble("Enter target language code (hi=Hindi, ta=Tamil, te=Telugu, kn=Kannada, ml=Malayalam):", is_user=False)
+                self.awaiting_translate_lang = True
+                self.awaiting_translate_text = False
+            elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
+                tgt_lang = user_text.strip() or "hi"
+                if OfflineTranslator:
+                    translator = OfflineTranslator()
+                    translated = translator.translate(self._translate_text, "en", tgt_lang)
+                    if translated.startswith("[Error]"):
+                        self.add_bubble(f"Translation failed: {translated}", is_user=False)
+                    else:
+                        self.add_bubble(f"Translation: {translated}", is_user=False)
+                else:
+                    self.add_bubble("Translation unavailable.", is_user=False)
+                self.awaiting_translate_lang = False               
+            else:
+                self.add_bubble("Sorry, I didn't understand. Try using a feature button.", is_user=False)                
+        finally:
+            # Remove loading indicator and re-enable input
+            self.chat_history.remove_widget(spinner)
+            self.text_input.disabled = False
+
+class FarmerAgentApp(App):
+    def build(self):
+        return ChatScreen()
+
+if __name__ == "__main__":
+    FarmerAgentApp().run()
 
     def calendar_action(self, instance):
         if CropCalendar:
@@ -262,7 +253,7 @@ class ChatScreen(BoxLayout):
             self.add_bubble("Calendar module not available.", is_user=False)
     def handle_calendar_option(self, user_text):
         option = user_text.strip()
-        from data.crop_calendar import CropCalendar as CropCalendarClass, Reminders as RemindersClass
+        from farmer_agent.data.crop_calendar import CropCalendar as CropCalendarClass, Reminders as RemindersClass
         self.calendar = CropCalendarClass()
         self.reminders = RemindersClass()
         if option == "1":
@@ -306,7 +297,7 @@ class ChatScreen(BoxLayout):
                 self.awaiting_translate_text = False
             elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
                 tgt_lang = user_text.strip() or "hi"
-                from nlp.translate import OfflineTranslator
+                from farmer_agent.nlp.translate import OfflineTranslator
                 translator = OfflineTranslator()
                 translated = translator.translate(self._translate_text, "en", tgt_lang)
                 if translated.startswith("[Error]"):
@@ -340,10 +331,10 @@ class ChatScreen(BoxLayout):
                 self._audio_file_path = file_path
                 self.awaiting_audio_file_lang = True
                 self.awaiting_audio_file = False
-            elif hasattr(self, 'awaiting_audio_file_lang') and self.awaiting_audio_file_lang:
+            if hasattr(self, 'awaiting_audio_file_lang') and self.awaiting_audio_file_lang:
                 lang = user_text.strip() or "auto"
-                from nlp.stt import STT
-                stt = STT(engine="whisper")
+                from farmer_agent.nlp.stt import STT
+                stt = STT()
                 text = stt.transcribe_audio(self._audio_file_path, language=lang)
                 self.add_bubble(f"Transcribed Text: {text}", is_user=False)
                 if speak:
@@ -392,7 +383,7 @@ class ChatScreen(BoxLayout):
                         self._last_advisory['feedback'] = feedback_val
                 # Optionally, store feedback in user profile if available
                 try:
-                    from data.user_profile import UserManager
+                    from farmer_agent.data.user_profile import UserManager
                     manager = UserManager()
                     user = manager.current_user if hasattr(manager, 'current_user') else None
                     if user:
@@ -619,7 +610,7 @@ class ChatScreen(BoxLayout):
                 advice = get_crop_advice(crop, soil)
                 # Save to user profile if available
                 try:
-                    from data.user_profile import UserManager
+                    from farmer_agent.data.user_profile import UserManager
                     if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
                         self.user_manager.current_user.add_query(f"{crop}, {soil}", advice)
                         self.show_user_profile_info()
@@ -685,9 +676,4 @@ class ChatScreen(BoxLayout):
         return crop, soil
 
 # --- Kivy App Runner ---
-class FarmerAgentApp(App):
-    def build(self):
-        return ChatScreen()
-
-if __name__ == "__main__":
-    FarmerAgentApp().run()
+# Remove duplicate FarmerAgentApp class if present below

@@ -3,5 +3,10 @@
     "crop": "Tomato",
     "activity": "Fertilize",
     "date": "2025-07-22"
+  },
+  {
+    "crop": "tomato",
+    "activity": "water plant",
+    "date": "2025-07-22"
   }
 ]

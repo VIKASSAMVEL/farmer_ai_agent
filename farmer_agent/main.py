@@ -36,7 +36,8 @@ def main():
 
     # Weather API key prompt (optional)
     # Load OpenWeatherMap API key from env.local or environment
-    load_env_local()
+    if 'load_env_local' in globals() and callable(load_env_local):
+        load_env_local()
     openweather_api_key = os.environ.get('OPENWEATHER_API_KEY')
     while True:
         print(acc.format_text("Select Feature:"))
@@ -56,17 +57,17 @@ def main():
             mode = input("Select mode: ").strip()
             if mode == "1":
                 lang = input("Language code (default: en): ").strip() or "en"
-                from nlp.stt import STT
-                stt = STT(engine="vosk")
-                text = stt.recognize_speech(lang=lang)
+                from nlp.stt import recognize_speech
+                result = recognize_speech(source="mic", lang=lang)
+                text = result.get("text", "") if isinstance(result, dict) else result
                 print(acc.apply_contrast(f"Recognized Text: {text}"))
                 acc.speak_text(text)
             elif mode == "2":
                 file_path = input("Enter audio file path: ").strip()
                 lang = input("Language code (default: auto): ").strip() or "auto"
-                from nlp.stt import STT
-                stt = STT(engine="whisper")
-                text = stt.transcribe_audio(file_path, language=lang)
+                from nlp.stt import recognize_speech
+                result = recognize_speech(source="file", file_path=file_path, lang=lang)
+                text = result.get("text", "") if isinstance(result, dict) else result
                 print(acc.apply_contrast(f"Transcribed Text: {text}"))
                 acc.speak_text(text)
             elif mode == "3":
@@ -176,31 +177,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-class FarmerAgent:
-    def __init__(self):
-        ...
-
-    def recognize_speech_from_microphone(self):
-        ...
-
-    def process_text_input(self, text):
-        ...
-
-    def identify_plant_image(self, image_path):
-        ...
-
-    def detect_disease_in_plant_image(self, image_path):
-        ...
-
-    def fetch_weather_data(self, location):
-        ...
-
-    def get_soil_condition(self, location):
-        # Implement API call to soil condition database
-        ...
-
-    def fetch_market_prices(self, commodity):
-        ...
-
-    def provide_advice(self, user_input, location):
-        ...

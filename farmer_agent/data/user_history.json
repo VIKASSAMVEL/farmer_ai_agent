@@ -1,19 +1,9 @@
 {
   "deva": {
-    "queries": [
-      {
-        "query": "tomato in summer in india, red soil",
-        "advisory": "Crop: tomato in summer in india\nRecommended Soil: N/A\nCurrent Soil: red soil\nSoil Notes: N/A\nMarket Price: N/A"
-      },
-      {
-        "query": "tomato, ",
-        "advisory": "Crop: tomato\nRecommended Soil: N/A\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: N/A",
-        "timestamp": "2025-07-15T11:29:13.131265"
-      }
-    ],
+    "queries": [],
     "meta": {
       "created_at": "2025-07-15T11:28:21.399269",
-      "last_active": "2025-07-15T11:29:13.131265"
+      "last_active": "2025-07-15T12:46:18.369282"
     }
   }
 }
