@@ -9,6 +9,19 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 WEATHER_FILE = os.path.join(DATA_DIR, 'weather_patterns.json')
 
 class WeatherEstimator:
+    def get_current_location(self):
+        """
+        Get current location (city) using IP geolocation API (ipinfo.io).
+        Returns city name or None if not available.
+        """
+        try:
+            resp = requests.get("https://ipinfo.io/json", timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("city")
+        except Exception as e:
+            print(f"IP geolocation error: {e}")
+        return None
     def __init__(self, api_key=None, openweather_api_key=None):
         self.patterns = self.load_patterns()
         self.default = {
@@ -151,5 +164,12 @@ class WeatherEstimator:
 
 if __name__ == "__main__":
     estimator = WeatherEstimator()
-    print("Estimated weather for current season:", estimator.estimate())
-    print("Estimated weather for 'monsoon':", estimator.estimate('monsoon'))
+    location = estimator.get_current_location()
+    if location:
+        print(f"Detected location: {location}")
+        weather = estimator.estimate(location=location, use_online=True)
+        print(f"Weather for {location}:")
+        print(json.dumps(weather, indent=2, ensure_ascii=False))
+    else:
+        print("Could not detect location. Showing default weather estimate.")
+        print("Estimated weather for current season:", estimator.estimate())

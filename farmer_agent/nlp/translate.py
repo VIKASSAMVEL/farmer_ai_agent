@@ -11,7 +11,7 @@ except ImportError:
     print("Please install transformers: pip install transformers")
     sys.exit(1)
 try:
-    from indictrans import IndicProcessor
+    from indictrans import IndicProcessor # type: ignore
 except ImportError:
     IndicProcessor = None
 
