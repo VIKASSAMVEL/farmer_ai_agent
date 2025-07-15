@@ -1,7 +1,7 @@
 # Farmer Agent
 
 
-The Farmer Agent is an AI-powered tool designed to provide tailored agricultural support to small-scale farmers and non-farmers across the world. It leverages natural language processing (NLP), computer vision, and real-time data integration to offer personalized guidance in various languages and mediums. The system now features a modern Kivy-based UI and a CLI, both with full feature parity.
+The Farmer Agent is an AI-powered tool designed to provide tailored agricultural support to small-scale farmers and non-farmers across the world. It leverages natural language processing (NLP), computer vision, and real-time data integration to offer personalized guidance in various languages and mediums. The system now features a modern Kivy-based UI and a CLI, both with full feature parity .
 
 ## Key Features
 
