@@ -4,21 +4,23 @@ import traceback
 import json
 import threading
 from datetime import datetime
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.popup import Popup
-from kivy.uix.spinner import Spinner
-from kivy.graphics import Color, RoundedRectangle
+from kivymd.app import MDApp
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDRectangleFlatButton, MDRaisedButton
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.gridlayout import MDGridLayout
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.spinner import MDSpinner
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.filemanager import MDFileManager
 from kivy.core.window import Window
-from kivy.resources import resource_find
+from kivy.uix.spinner import Spinner
 from kivy.clock import Clock
-from kivy.uix.dropdown import DropDown
+from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.uix.filechooser import FileChooserIconView
+from kivy.uix.popup import Popup
 
 # Configure logging
 logging.basicConfig(
@@ -46,34 +48,32 @@ except ImportError as e:
     logging.error(f"Backend import error: {str(e)}")
     get_crop_advice = FAQ = WeatherEstimator = CropCalendar = Reminders = recognize_speech = STT = speak = list_voices = OfflineTranslator = PlantIdentifier = load_json = UserManager = Analytics = load_env_local = None
 
-class ChatBubble(BoxLayout):
+class ChatBubble(MDBoxLayout):
     def __init__(self, text, is_user=False, **kwargs):
         super().__init__(orientation='horizontal', size_hint_y=None, padding=[16, 8, 16, 8], **kwargs)
         timestamp = datetime.now().strftime('%H:%M')
         bubble_color = (33/255, 194/255, 94/255, 1) if is_user else (27/255, 38/255, 59/255, 1)
         shadow_color = (0, 0, 0, 0.22)
         avatar_size = 40
-        # Avatar icon
         avatar_text = '🧑' if is_user else '🤖'
-        avatar = Label(text=avatar_text, font_size=28, size_hint=(None, None), size=(avatar_size, avatar_size), color=(1,1,1,1))
-        # Bubble label
-        self.label = Label(
+        avatar = MDLabel(text=avatar_text, font_style='H5', size_hint=(None, None), size=(avatar_size, avatar_size), theme_text_color='Custom', text_color=(1,1,1,1))
+        self.label = MDLabel(
             text=text,
             size_hint_x=0.75,
             halign='right' if is_user else 'left',
             valign='middle',
-            color=(1, 1, 1, 1),
-            font_size=16,
-            text_size=(Window.width * 0.7, None),
-            markup=True,
-            opacity=0  # Start hidden for fade-in
+            theme_text_color='Custom',
+            text_color=(1, 1, 1, 1),
+            font_style='Body1',
+            opacity=0
         )
         self.label.bind(texture_size=self._update_height)
-        self.timestamp_label = Label(
+        self.timestamp_label = MDLabel(
             text=timestamp,
             size_hint_x=0.15,
-            font_size=12,
-            color=(0.7, 0.9, 0.7, 1),
+            font_style='Caption',
+            theme_text_color='Custom',
+            text_color=(0.7, 0.9, 0.7, 1),
             halign='right',
             valign='bottom'
         )
@@ -86,23 +86,9 @@ class ChatBubble(BoxLayout):
             self.add_widget(avatar)
             self.add_widget(self.label)
             self.add_widget(self.timestamp_label)
-        with self.canvas.before:
-            Color(*shadow_color)
-            self.shadow_rect = RoundedRectangle(radius=[20], pos=(self.pos[0]+3, self.pos[1]-3), size=(self.size[0], self.size[1]))
-            Color(*bubble_color)
-            self.bg_rect = RoundedRectangle(radius=[20], pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg_rect, size=self._update_bg_rect)
         # Fade-in animation for bubble
         from kivy.animation import Animation
         Animation(opacity=1, d=0.4, t='out_quad').start(self.label)
-
-    def _update_bg_rect(self, *args):
-        if hasattr(self, 'shadow_rect'):
-            self.shadow_rect.pos = (self.pos[0]+3, self.pos[1]-3)
-            self.shadow_rect.size = (self.size[0], self.size[1])
-        if hasattr(self, 'bg_rect'):
-            self.bg_rect.pos = self.pos
-            self.bg_rect.size = self.size
 
     def _update_height(self, *args):
         min_height = 48
@@ -111,16 +97,16 @@ class ChatBubble(BoxLayout):
         self.height = self.label.height + 12
 
 def show_debug_popup(error_msg):
-    content = BoxLayout(orientation='vertical')
-    label = Label(text=error_msg, size_hint_y=None, height=400, font_name='DejaVuSans')
-    btn = Button(text='Close', size_hint_y=None, height=40)
+    content = MDBoxLayout(orientation='vertical')
+    label = MDLabel(text=error_msg, size_hint_y=None, height=400, font_name='DejaVuSans')
+    btn = MDRectangleFlatButton(text='Close', size_hint_y=None, height=40)
     content.add_widget(label)
     content.add_widget(btn)
-    popup = Popup(title='Debugger - Error Traceback', content=content, size_hint=(0.9, 0.7))
+    popup = MDDialog(title='Debugger - Error Traceback', content=content, size_hint=(0.9, 0.7))
     btn.bind(on_release=popup.dismiss)  # type: ignore
     popup.open()
 
-class ChatScreen(BoxLayout):
+class ChatScreen(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -129,26 +115,26 @@ class ChatScreen(BoxLayout):
             return int(val * Window.width / 800)
 
         # --- Top bar with app title and language dropdown ---
-        top_bar = BoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
-        header_label = Label(text='🤖 Farmer AI Agent', font_size=get_scaled(32), bold=True, color=(33/255, 194/255, 94/255, 1))
+        top_bar = MDBoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
+        header_label = MDLabel(text='🤖 Farmer AI Agent', font_style='H4', bold=True, theme_text_color='Custom', text_color=(33/255, 194/255, 94/255, 1))
         # Language dropdown
-        self.language_dropdown = DropDown()
         self.language_options = [
             ("English", "en"), ("Hindi", "hi"), ("Tamil", "ta"), ("Telugu", "te"), ("Kannada", "kn"), ("Malayalam", "ml")
         ]
-        self.language_btn = Button(text="🌐 Language", size_hint=(None, 1), width=160, background_normal='', background_color=(27/255, 38/255, 59/255, 1), color=(1,1,1,1), font_size=get_scaled(18))
-        for lang_name, lang_code in self.language_options:
-            btn = Button(text=lang_name, size_hint_y=None, height=44)
-            btn.bind(on_release=lambda btn, code=lang_code: self.set_language(code))
-            self.language_dropdown.add_widget(btn)
-        self.language_btn.bind(on_release=self.language_dropdown.open)
+        self.language_menu = MDDropdownMenu(
+            caller=None,
+            items=[{'text': lang_name, 'on_release': lambda x=lang_code: self.set_language(x)} for lang_name, lang_code in self.language_options],
+            width_mult=4
+        )
+        self.language_btn = MDRaisedButton(text="🌐 Language", size_hint=(None, 1), width=160, md_bg_color=(27/255, 38/255, 59/255, 1), text_color=(1,1,1,1), font_size=get_scaled(18))
+        self.language_btn.bind(on_release=lambda x: self.language_menu.open())
         top_bar.add_widget(header_label)
         top_bar.add_widget(self.language_btn)
         self.add_widget(top_bar)
 
         # --- Mode dropdown (Advisory, Calendar, FAQ, Weather, Translate, Analytics) ---
-        mode_bar = BoxLayout(size_hint=(1, 0.08), padding=[get_scaled(16), 0, get_scaled(16), 0])
-        self.mode_dropdown = DropDown()
+        mode_bar = MDBoxLayout(size_hint=(1, 0.08), padding=[get_scaled(16), 0, get_scaled(16), 0])
+        self.mode_btn = MDRaisedButton(text="Select Mode", size_hint=(None, 1), width=180, md_bg_color=(27/255, 38/255, 59/255, 1), text_color=(1,1,1,1), font_size=get_scaled(18))
         self.mode_options = [
             ("Advisory", self.advisory_action),
             ("Calendar", self.calendar_action),
@@ -157,25 +143,24 @@ class ChatScreen(BoxLayout):
             ("Translate", self.translate_action),
             ("Analytics", self.analytics_action)
         ]
-        self.mode_btn = Button(text="Select Mode", size_hint=(None, 1), width=180, background_normal='', background_color=(33/255, 194/255, 94/255, 1), color=(1,1,1,1), font_size=get_scaled(18))
         for mode_name, mode_func in self.mode_options:
-            btn = Button(text=mode_name, size_hint_y=None, height=44)
+            btn = MDRectangleFlatButton(text=mode_name, size_hint_y=None, height=52, md_bg_color=(33/255, 194/255, 94/255, 1), text_color=(1,1,1,1), font_size=18)
             btn.bind(on_release=lambda btn, func=mode_func: self.select_mode(func))
-            self.mode_dropdown.add_widget(btn)
+            mode_bar.add_widget(btn)
         self.mode_btn.bind(on_release=self.mode_dropdown.open)
         mode_bar.add_widget(self.mode_btn)
         self.add_widget(mode_bar)
 
         # --- Chat history area (unchanged) ---
-        chat_area = BoxLayout(size_hint=(1, 0.62), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
-        self.chat_history = GridLayout(cols=1, spacing=get_scaled(14), size_hint_y=None)
+        chat_area = MDBoxLayout(size_hint=(1, 0.62), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
+        self.chat_history = MDGridLayout(cols=1, spacing=get_scaled(14), size_hint_y=None)
         self.chat_history.bind(minimum_height=self.chat_history.setter('height'))  # type: ignore
-        self.scroll = ScrollView(size_hint=(1, 1))
+        self.scroll = MDScrollView(size_hint=(1, 1))
         self.scroll.add_widget(self.chat_history)
         chat_area.add_widget(self.scroll)
         self.add_widget(chat_area)
         # Divider
-        class Divider(BoxLayout):
+        class Divider(MDBoxLayout):
             def __init__(self, **kwargs):
                 super().__init__(size_hint=(1, None), height=2, **kwargs)
                 with self.canvas:  # type: ignore
@@ -188,24 +173,22 @@ class ChatScreen(BoxLayout):
                 self.rect.size = (self.width, 2)
         self.add_widget(Divider())
         # --- Input dropdown (Text, Image) ---
-        input_bar = BoxLayout(size_hint=(1, 0.12), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)], spacing=get_scaled(12))
-        self.input_dropdown = DropDown()
-        self.input_options = [
-            ("Text", self.set_input_text),
-            ("Image", self.set_input_image)
-        ]
-        self.input_btn = Button(text="📝 Input Type", size_hint=(None, 1), width=140, background_normal='', background_color=(27/255, 38/255, 59/255, 1), color=(1,1,1,1), font_size=get_scaled(18))
+        input_bar = MDBoxLayout(size_hint=(1, 0.12), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)], spacing=get_scaled(12))
+        self.input_btn = MDRaisedButton(text="📝 Input Type", size_hint=(None, 1), width=140, md_bg_color=(27/255, 38/255, 59/255, 1), text_color=(1,1,1,1), font_size=get_scaled(18))
         for input_name, input_func in self.input_options:
-            btn = Button(text=input_name, size_hint_y=None, height=44)
+            btn = MDRectangleFlatButton(text=input_name, size_hint_y=None, height=52, md_bg_color=(33/255, 194/255, 94/255, 1), text_color=(1,1,1,1), font_size=18)
             btn.bind(on_release=lambda btn, func=input_func: func())
             self.input_dropdown.add_widget(btn)
         self.input_btn.bind(on_release=self.input_dropdown.open)
         input_bar.add_widget(self.input_btn)
         # Add text input and send button as before
-        class ModernInput(TextInput):
+        class ModernInput(MDTextField):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
-                self.background_color = (27/255, 38/255, 59/255, 1)
+                self.helper_text_mode = "on_focus"
+                self.line_color_focus = (33/255, 194/255, 94/255, 1)
+                self.line_color_normal = (0.8, 0.8, 0.8, 1)
+                self.fill_color = (27/255, 38/255, 59/255, 1)
                 self.hint_text = 'Type your message...'
                 self.font_size = get_scaled(18)
                 self.padding = [get_scaled(16), get_scaled(12), get_scaled(16), get_scaled(12)]
@@ -213,34 +196,24 @@ class ChatScreen(BoxLayout):
                 self.foreground_color = (1, 1, 1, 1)
                 self.cursor_color = (1, 1, 1, 1)
                 self.hint_text_color = (0.8, 0.95, 0.8, 1)
-                with self.canvas.before:
-                    Color(33/255, 194/255, 94/255, 0.12)
-                    self.bg_rect = RoundedRectangle(radius=[24], pos=self.pos, size=self.size)
-                self.bind(pos=self._update_bg, size=self._update_bg)
-            def _update_bg(self, *args):
-                self.bg_rect.pos = self.pos
-                self.bg_rect.size = self.size
         self.text_input = ModernInput(size_hint=(0.8, 1), multiline=False)
         from kivy.animation import Animation
-        class ModernButton(Button):
+        # ModernButton without HoverBehavior
+        from kivy.uix.behaviors import ButtonBehavior
+        class ModernButton(ButtonBehavior, MDRaisedButton):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
-                self.background_normal = ''
-                self.background_color = (33/255, 194/255, 94/255, 1)
-                self.color = (1, 1, 1, 1)
+                self.md_bg_color = (0.13, 0.76, 0.37, 1)
+                self.text_color = (1, 1, 1, 1)
                 self.font_size = get_scaled(18)
                 self.bold = True
                 with self.canvas.before:
-                    Color(33/255, 194/255, 94/255, 1)
-                    self.bg_rect = RoundedRectangle(radius=[24], pos=self.pos, size=self.size)
+                    Color(0.13, 0.76, 0.37, 1)
+                    self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[24])
                 self.bind(pos=self._update_bg, size=self._update_bg)
-                self.bind(on_press=self.animate_press)
             def _update_bg(self, *args):
                 self.bg_rect.pos = self.pos
                 self.bg_rect.size = self.size
-            def animate_press(self, *args):
-                anim = Animation(background_color=(27/255, 38/255, 59/255, 1), d=0.12) + Animation(background_color=(33/255, 194/255, 94/255, 1), d=0.18)
-                anim.start(self)
         send_btn = ModernButton(text='🚀 Send', size_hint=(0.2, 1))
         send_btn.bind(on_release=self.send_message)
         self.mic_btn = None  # Placeholder for mic button
@@ -253,8 +226,8 @@ class ChatScreen(BoxLayout):
         # ...existing code...
 
         # --- Footer (unchanged) ---
-        footer = BoxLayout(size_hint=(1, 0.05), padding=[0, get_scaled(4), 0, get_scaled(4)])
-        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(33/255, 194/255, 94/255, 1))
+        footer = MDBoxLayout(size_hint=(1, 0.05), padding=[0, get_scaled(4), 0, get_scaled(4)])
+        footer_label = MDLabel(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(33/255, 194/255, 94/255, 1))
         footer.add_widget(footer_label)
         self.add_widget(footer)
         # Initialize UserManager
@@ -442,14 +415,14 @@ class ChatScreen(BoxLayout):
                 ("Delete reminder", "5"),
                 ("Next activity", "6")
             ]
-            option_layout = BoxLayout(orientation='vertical', size_hint_y=None)
+            option_layout = MDBoxLayout(orientation='vertical', size_hint_y=None)
             option_layout.bind(minimum_height=option_layout.setter('height'))
             for label, value in options:
-                btn = Button(text=f"{label}", size_hint_y=None, height=52, font_size=18, background_normal='', background_color=(33/255, 194/255, 94/255, 1), color=(1,1,1,1))
+                btn = MDRectangleFlatButton(text=f"{label}", size_hint_y=None, height=52, md_bg_color=(33/255, 194/255, 94/255, 1), text_color=(1,1,1,1), font_size=18)
                 btn.bind(on_release=lambda btn, v=value: self.calendar_option_selected(v))
                 option_layout.add_widget(btn)
             from kivy.animation import Animation
-            popup = Popup(title="Calendar Options", content=option_layout, size_hint=(0.7, 0.7), opacity=0)
+            popup = MDDialog(title="Calendar Options", content=option_layout, size_hint=(0.7, 0.7), opacity=0)
             self._calendar_popup = popup
             def animate_open(*args):
                 Animation(opacity=1, d=0.35, t='out_quad').start(popup)
@@ -800,7 +773,7 @@ class ChatScreen(BoxLayout):
                         self.state["context"]["input_type"] = "mic"
                         # Add mic button if not present
                         if not self.mic_btn:
-                            self.mic_btn = Button(text="🎤 Mic", size_hint=(None, None), size=(60, 44), background_color=(0.2, 0.6, 0.2, 1), color=(1, 1, 1, 1))
+                            self.mic_btn = MDRectangleFlatButton(text="🎤 Mic", size_hint=(None, None), size=(60, 44), md_bg_color=(0.2, 0.6, 0.2, 1), text_color=(1, 1, 1, 1))
                             self.mic_btn.bind(on_release=self.start_mic_recording)
                             self.add_widget(self.mic_btn)
                     else:
@@ -965,7 +938,7 @@ class ChatScreen(BoxLayout):
             self.add_bubble(f"Calendar error: {str(e)}", is_user=False)
             self.state["mode"] = None
 
-class FarmerAgentApp(App):
+class FarmerAgentApp(MDApp):
     def build(self):
         return ChatScreen()
 
