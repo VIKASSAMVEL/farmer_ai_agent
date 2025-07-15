@@ -1,0 +1,79 @@
+[AGENT]: Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image
+[AGENT]: Please enter your crop name for advisory:
+[USER]: tomato
+[AGENT]: Waiting for response...
+[AGENT]: === STRUCTURED ADVISORY ===
+[AGENT]: {
+  "crop": "Tomato",
+  "recommended_soil": "Sandy Loam",
+  "current_soil": "N/A",
+  "soil_notes": "N/A",
+  "market_price": 1.5,
+  "climate_smart_tips": [
+    "Use drip irrigation to save water.",
+    "Apply organic mulch for moisture retention."
+  ],
+  "care_instructions": [
+    "Check for leaf spots weekly.",
+    "Fertilize with compost every 2 weeks."
+  ],
+  "formatted": "Crop: Tomato\nRecommended Soil: Sandy Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 1.5\nClimate-Smart Tips:\n- Use drip irrigation to save water.\n- Apply organic mulch for moisture retention.\nCare Instructions:\n- Check for leaf spots weekly.\n- Fertilize with compost every 2 weeks."
+}
+[AGENT]: === FORMATTED ADVISORY ===
+[AGENT]: Crop: Tomato
+Recommended Soil: Sandy Loam
+Current Soil: N/A
+Soil Notes: N/A
+Market Price: 1.5
+Climate-Smart Tips:
+- Use drip irrigation to save water.
+- Apply organic mulch for moisture retention.
+Care Instructions:
+- Check for leaf spots weekly.
+- Fertilize with compost every 2 weeks.
+[AGENT]: Calendar feature coming soon!
+[AGENT]: Please enter your question or keyword for FAQ:
+[AGENT]: Please enter your question or keyword for FAQ:
+[USER]: tomato
+[AGENT]: Waiting for response...
+[AGENT]: FAQ Results for 'tomato':
+[AGENT]: [
+  {
+    "question": "How often should I water tomato plants?",
+    "answer": "Water tomato plants every 2-3 days, keeping the soil moist but not waterlogged.",
+    "tags": [
+      "tomato",
+      "watering",
+      "irrigation"
+    ]
+  },
+  {
+    "question": "How do I prevent blossom end rot in tomatoes?",
+    "answer": "Ensure consistent watering and provide adequate calcium to prevent blossom end rot in tomatoes.",
+    "tags": [
+      "tomato",
+      "blossom end rot",
+      "calcium"
+    ]
+  }
+]
+[AGENT]: Weather feature coming soon!
+[AGENT]: Enter text to translate from English:
+[AGENT]: Analytics feature coming soon!
+[AGENT]: Available TTS Voices:
+[AGENT]: Voice 0: Microsoft David Desktop - English (United States) | ID: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_DAVID_11.0
+Voice 1: Microsoft Zira Desktop - English (United States) | ID: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0
+
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: User history cleared.
+[AGENT]: Goodbye! Close the window to exit.

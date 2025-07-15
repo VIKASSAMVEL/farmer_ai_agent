@@ -118,11 +118,43 @@ class ChatScreen(BoxLayout):
             self.user_manager = None  # Let it crash to debug
             self.add_bubble(f"UserManager init error: {e}", is_user=False)
 
-    def add_bubble(self, text, is_user=False):
+    def add_bubble(self, text, is_user=False, log_type='msg'):
+        import datetime
         bubble = Label(text=text, size_hint_y=None, height=40, halign='right' if is_user else 'left', valign='middle')
         self.chat_history.add_widget(bubble)
         self.chat_history.height = self.chat_history.minimum_height
         self.scroll.scroll_y = 0
+        # --- Logging to file with timestamp and duplicate prevention ---
+        try:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            prefix = '[USER]' if is_user else '[AGENT]'
+            log_entry = f'{timestamp} {prefix}: {text}\n'
+            # Prevent duplicate 'User history cleared.' entries within 2 seconds
+            if text == 'User history cleared.':
+                try:
+                    with open('kivy_chat_log.txt', 'r', encoding='utf-8') as logf:
+                        lines = logf.readlines()
+                        if lines:
+                            last_line = lines[-1]
+                            if 'User history cleared.' in last_line:
+                                last_time = last_line.split(' ')[0]
+                                last_dt = datetime.datetime.strptime(last_time, '%Y-%m-%d')
+                                # Only log if more than 2 seconds have passed
+                                if (datetime.datetime.now() - last_dt).total_seconds() < 2:
+                                    return
+                except Exception:
+                    pass
+            with open('kivy_chat_log.txt', 'a', encoding='utf-8') as logf:
+                logf.write(log_entry)
+        except Exception as e:
+            # Log error to file
+            try:
+                import datetime
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                with open('kivy_chat_log.txt', 'a', encoding='utf-8') as logf:
+                    logf.write(f'{timestamp} [ERROR]: {str(e)}\n')
+            except Exception:
+                pass
 
     # --- Feature Actions (map CLI menu to GUI buttons) ---
     def input_action(self, instance):

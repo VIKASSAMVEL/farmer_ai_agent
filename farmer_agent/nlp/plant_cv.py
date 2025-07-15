@@ -1,6 +1,6 @@
 # Template for Plant Identification using Roboflow Inference SDK
 # This module will be implemented later for offline computer vision
-
+from inference_sdk import InferenceHTTPClient
 class PlantIdentifier:
     def __init__(self, model_path=None):
         """
@@ -23,6 +23,14 @@ class PlantIdentifier:
             "confidence": None,
             "details": "To be implemented"
         }
+    
+
+    CLIENT = InferenceHTTPClient(
+        api_url="https://serverless.roboflow.com",
+        api_key="HAISJzXtj7t48iPVJhQG"
+    )
+
+result = CLIENT.infer(your_image.jpg, model_id="leaf-disease-f06v7/1")
 
 if __name__ == "__main__":
     identifier = PlantIdentifier()
