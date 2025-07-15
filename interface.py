@@ -1,6 +1,10 @@
 
 import os
 
+# Agentic/LLM integration imports
+from farmer_agent.nlp.cv import PlantIdentifier
+from farmer_agent.main import agentic_response
+
 # --- ChatBubble for chat display ---
 from kivy.uix.label import Label
 class ChatBubble(Label):
@@ -28,7 +32,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.spinner import Spinner
 
 # Import all backend modules with error handling
-try:  # Temporarily comment out for deeper debugging
+try:
     from farmer_agent.advisory.advisor import get_crop_advice
     from farmer_agent.data.faq import FAQ
     from farmer_agent.data.weather import WeatherEstimator
@@ -36,13 +40,13 @@ try:  # Temporarily comment out for deeper debugging
     from farmer_agent.nlp.stt import recognize_speech
     from farmer_agent.nlp.tts import speak, list_voices
     from farmer_agent.nlp.translate import OfflineTranslator
-    from farmer_agent.nlp.plant_cv import PlantIdentifier
+    from farmer_agent.nlp.cv import PlantIdentifier
     from farmer_agent.utils.file_utils import load_json
     from farmer_agent.data.user_profile import UserManager
     from farmer_agent.data.analytics import Analytics
     from farmer_agent.utils.env_loader import load_env_local
-except Exception as e: # Temporarily comment out for deeper debugging
-    get_crop_advice = FAQ = WeatherEstimator = CropCalendar = Reminders = recognize_speech = speak = list_voices = OfflineTranslator = PlantIdentifier = load_json = UserManager = Analytics = load_env_local = None
+except Exception as e:
+    get_crop_advice = FAQ = WeatherEstimator = CropCalendar = Reminders = recognize_speech = speak = list_voices = OfflineTranslator = load_json = UserManager = Analytics = load_env_local = None
 
 def show_debug_popup(error_msg):
     content = BoxLayout(orientation='vertical')
@@ -51,7 +55,7 @@ def show_debug_popup(error_msg):
     content.add_widget(label)
     content.add_widget(btn)
     popup = Popup(title='Debugger - Error Traceback', content=content, size_hint=(0.9, 0.7))
-    btn.bind(on_release=popup.dismiss)
+    btn.bind(on_release=popup.dismiss) # type: ignore
     popup.open()
 
 class ChatScreen(BoxLayout):
@@ -60,7 +64,7 @@ class ChatScreen(BoxLayout):
         self.orientation = 'vertical'
         # Chat history area
         self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
-        self.chat_history.bind(minimum_height=self.chat_history.setter('height')) # Fix: Use bind for height
+        self.chat_history.bind(minimum_height=self.chat_history.setter('height')) # type: ignore # Fix: Use bind for height
         self.scroll = ScrollView(size_hint=(1, 0.7))
         self.scroll.add_widget(self.chat_history)
         self.add_widget(self.scroll)
@@ -68,7 +72,7 @@ class ChatScreen(BoxLayout):
         input_layout = BoxLayout(size_hint=(1, 0.1))
         self.text_input = TextInput(size_hint=(0.8, 1), multiline=False)
         send_btn = Button(text='Send', size_hint=(0.2, 1))
-        send_btn.bind(on_release=self.send_message)
+        send_btn.bind(on_release=self.send_message) # type: ignore
         input_layout.add_widget(self.text_input)
         input_layout.add_widget(send_btn)
         self.add_widget(input_layout)
@@ -348,9 +352,13 @@ if __name__ == "__main__":
                 elif mode == "3":
                     self.add_bubble("Enter your request:", is_user=False)
                     self.awaiting_text_input = True
-                elif mode == "4" and PlantIdentifier:
-                    self.add_bubble("Enter image path:", is_user=False)
-                    self.awaiting_image_path = True
+                elif mode == "4":
+                    try:
+                        from farmer_agent.nlp.cv import PlantIdentifier
+                        self.add_bubble("Enter image path:", is_user=False)
+                        self.awaiting_image_path = True
+                    except ImportError:
+                        self.add_bubble("PlantIdentifier module not available.", is_user=False)
                 else:
                     self.add_bubble("Invalid input mode or module not available.", is_user=False)
                 self.awaiting_input_mode = False

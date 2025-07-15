@@ -1,3 +1,20 @@
+def agentic_response(user_query, plant_result=None):
+    # Load static data
+    with open('farmer_agent/data/faq.json', 'r', encoding='utf-8') as f:
+        faq_data = json.load(f)
+    with open('farmer_agent/data/market_prices.json', 'r', encoding='utf-8') as f:
+        market_data = json.load(f)
+    # Compose prompt for LLM (replace with your LLM call)
+    prompt = f"User question: {user_query}\n"
+    if plant_result:
+        prompt += f"Plant disease detection: {plant_result}\n"
+    prompt += f"FAQs: {json.dumps(faq_data)}\n"
+    prompt += f"Market prices: {json.dumps(market_data)}\n"
+    prompt += "Answer the user's question using the above data."
+    # Call your LLM here (pseudo)
+    # response = llm_api.generate(prompt)
+    response = "[LLM response placeholder]"  # Replace with actual LLM call
+    return response
 # Main entry point for Farmer Agent (offline, free)
 
 # Unified Farmer Agent Main Script (Offline)
@@ -9,7 +26,7 @@ from advisory.advisor import get_crop_advice
 from nlp.stt import recognize_speech
 from nlp.tts import speak, list_voices
 from nlp.translate import OfflineTranslator
-from nlp.plant_cv import PlantIdentifier
+from nlp.cv import PlantIdentifier
 from utils.file_utils import load_json
 from data.user_profile import UserManager
 from data.crop_calendar import CropCalendar, Reminders
