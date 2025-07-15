@@ -70,7 +70,7 @@ def main():
             advice = get_crop_advice(crop, soil if soil else None)
             print(acc.format_text("Personalized Advisory:"))
             print(json.dumps(advice, indent=2, ensure_ascii=False))
-            acc.speak_text(advice.get('care_instructions', ['No instructions'])[0])
+            acc.speak_text(advice if isinstance(advice, str) else advice.get('care_instructions', ['No instructions'])[0])
             user.add_query(f"{crop}, {soil}", advice)
 
         elif choice == "3":
