@@ -43,11 +43,16 @@ import whisper
 
 class STT:
     def __init__(self):
-        self.model = whisper.load_model("small")
+        # Make sure openai-whisper is installed: pip install openai-whisper
+        import whisper
+        self.model = whisper.load_model("base")
 
     def transcribe_audio(self, file_path: str, language: str = "auto") -> str:
         try:
             result = self.model.transcribe(file_path, language=language)
-            return result["text"]
+            text = result["text"]
+            if isinstance(text, list):
+                text = " ".join(str(t) for t in text)
+            return text
         except Exception as e:
             return f"[Error] {str(e)}"

@@ -1,48 +1,121 @@
 # Main entry point for Farmer Agent (offline, free)
+
+# Unified Farmer Agent Main Script (Offline)
 import sys
 import os
-
+import json
 from advisory.advisor import get_crop_advice
 from nlp.stt import recognize_speech
-from nlp.tts import speak
+from nlp.tts import speak, list_voices
 from nlp.translate import OfflineTranslator
 from nlp.plant_cv import PlantIdentifier
 from utils.file_utils import load_json
+from data.user_profile import UserManager
+from data.crop_calendar import CropCalendar, Reminders
+from data.faq import FAQ
+from data.weather import WeatherEstimator
+from data.analytics import Analytics
+from utils.accessibility import Accessibility
 
 def main():
-    print("Farmer Agent - Select Input Mode:")
-    print("1. Voice Input")
-    print("2. Text Input")
-    print("3. Image Input")
-    mode = input("Enter choice (1/2/3): ").strip()
+    print("\n=== Farmer Agent ===")
+    # Multi-user support
+    manager = UserManager()
+    print("Existing users:", manager.list_users())
+    username = input("Enter username to switch or create: ")
+    manager.add_user(username)
+    user = manager.switch_user(username)
 
-    if mode == "1":
-        text = recognize_speech()
-        print("Recognized Text:", text)
-    elif mode == "2":
-        text = input("Enter your request: ")
-    elif mode == "3":
-        image_path = input("Enter image path: ")
-        identifier = PlantIdentifier()
-        result = identifier.identify(image_path)
-        print("Plant Identification Result:", result)
-        text = result.get("plant_type", "")
-    else:
-        print("Invalid choice.")
-        return
+    # Accessibility options
+    acc = Accessibility(
+        large_text=input("Large text mode? (y/n): ").lower() == 'y',
+        high_contrast=input("High contrast mode? (y/n): ").lower() == 'y',
+        voice_nav=input("Voice navigation? (y/n): ").lower() == 'y'
+    )
 
-    # Example: advisory for crop (from recognized text or user input)
-    crop = input("Enter crop name for advisory: ")
-    soil = input("Enter soil type (optional): ")
-    advice = get_crop_advice(crop, soil if soil else None)
-    print("\nPersonalized Advisory:")
-    import json
-    print(json.dumps(advice, indent=2, ensure_ascii=False))
+    while True:
+        print(acc.format_text("Select Feature:"))
+        print("1. Input (Voice/Text/Image)")
+        print("2. Crop Advisory")
+        print("3. Crop Calendar & Reminders")
+        print("4. FAQ & Guidance")
+        print("5. Weather Estimation")
+        print("6. Analytics")
+        print("7. List TTS Voices")
+        print("8. Exit")
+        choice = input("Enter choice: ").strip()
 
-    # Optional: Speak the advisory in user's language
-    lang_voice = input("Enter language/voice for TTS (optional): ")
-    if lang_voice:
-        speak(advice.get('care_instructions', ['No instructions'])[0], lang_voice)
+        if choice == "1":
+            print("Input Modes: 1. Voice 2. Text 3. Image")
+            mode = input("Select mode: ").strip()
+            if mode == "1":
+                text = recognize_speech()
+                print(acc.apply_contrast(f"Recognized Text: {text}"))
+                acc.speak_text(text)
+            elif mode == "2":
+                text = input("Enter your request: ")
+                print(acc.apply_contrast(f"Text: {text}"))
+                acc.speak_text(text)
+            elif mode == "3":
+                image_path = input("Enter image path: ")
+                identifier = PlantIdentifier()
+                result = identifier.identify(image_path)
+                print(acc.apply_contrast(f"Plant Identification Result: {result}"))
+            else:
+                print("Invalid mode.")
+
+        elif choice == "2":
+            crop = input("Enter crop name for advisory: ")
+            soil = input("Enter soil type (optional): ")
+            advice = get_crop_advice(crop, soil if soil else None)
+            print(acc.format_text("Personalized Advisory:"))
+            print(json.dumps(advice, indent=2, ensure_ascii=False))
+            acc.speak_text(advice.get('care_instructions', ['No instructions'])[0])
+            user.add_query(f"{crop}, {soil}", advice)
+
+        elif choice == "3":
+            calendar = CropCalendar()
+            print(acc.format_text("Crop Calendar:"))
+            crop = input("Enter crop name: ")
+            print(json.dumps(calendar.get_schedule(crop), indent=2, ensure_ascii=False))
+            reminders = Reminders()
+            print(acc.format_text("Reminders:"))
+            print(json.dumps(reminders.get_upcoming(), indent=2, ensure_ascii=False))
+            if input("Add reminder? (y/n): ").lower() == 'y':
+                activity = input("Activity: ")
+                days = int(input("Days from now: "))
+                reminders.add_reminder(crop, activity, days)
+
+        elif choice == "4":
+            faq = FAQ()
+            query = input("Enter keyword for FAQ search: ")
+            results = faq.search(query)
+            print(acc.format_text("FAQ Results:"))
+            print(json.dumps(results, indent=2, ensure_ascii=False))
+
+        elif choice == "5":
+            estimator = WeatherEstimator()
+            season = input("Enter season (summer/monsoon/winter, blank for auto): ")
+            weather = estimator.estimate(season if season else None)
+            print(acc.format_text("Weather Estimation:"))
+            print(json.dumps(weather, indent=2, ensure_ascii=False))
+
+        elif choice == "6":
+            analytics = Analytics()
+            print(acc.format_text("User Activity Summary:"))
+            print(json.dumps(analytics.user_activity_summary(username), indent=2, ensure_ascii=False))
+            print(acc.format_text("Crop Trends:"))
+            print(json.dumps(analytics.crop_trends(), indent=2, ensure_ascii=False))
+
+        elif choice == "7":
+            print(acc.format_text("Available TTS Voices:"))
+            list_voices()
+
+        elif choice == "8":
+            print(acc.format_text("Goodbye!"))
+            break
+        else:
+            print("Invalid choice.")
 
 if __name__ == "__main__":
     main()
