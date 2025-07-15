@@ -1,0 +1,21 @@
+2025-07-15 20:22:01 [AGENT]: Detected location: Srīperumbūdūr
+2025-07-15 20:22:01 [AGENT]: Could not fetch weekly forecast. Check API key or location.
+2025-07-15 20:23:05 [AGENT]: Detected location: Srīperumbūdūr
+2025-07-15 20:23:05 [AGENT]: Could not fetch weekly forecast. Check API key or location.
+2025-07-15 20:23:11 [AGENT]: Please enter your question or keyword for FAQ:
+2025-07-15 20:23:18 [USER]: tomato
+2025-07-15 20:23:18 [AGENT]: Waiting for response...
+2025-07-15 20:23:44 [AGENT]: LLM FAQ Response:
+2025-07-15 20:23:44 [AGENT]: The tomato!
+
+Tomatoes are one of the most popular and versatile fruits (yes, they're a fruit!) in the world. Here are some interesting facts about tomatoes:
+
+1. **Origin**: Tomatoes originated in South America over 2,000 years ago. The Incas called them "tomatl".
+2. **Fruit or vegetable?**: Botanically speaking, tomatoes are a type of fruit called a "berry". However, in culinary and everyday contexts, they're often referred to as a vegetable.
+3. **Varieties**: There are hundreds of tomato varieties, ranging from cherry tomatoes to beefsteak tomatoes, each with its unique flavor, texture, and color.
+4. **Nutrition**: Tomatoes are an excellent source of vitamin C, potassium, and lycopene (an antioxidant that's been linked to several health benefits).
+5. **Culinary uses**: Tomatoes can be used in a wide range of dishes, from salads to sauces, soups, sandwiches, pasta, and even desserts!
+6. **Record-breaking**: The largest tomato ever grown was over 3 pounds (1.4 kg) and measured 14 inches (35 cm) long.
+7. **Gardening tips**: Tomatoes are relatively easy to grow at home. Make sure your plants get plenty of sunlight, water them regularly, and provide support as they grow.
+
+What's your favorite way to enjoy tomatoes?

@@ -106,6 +106,7 @@ class ChatScreen(BoxLayout):
         self.awaiting_reminder_days = False
         self.awaiting_translate_text = False
         self.awaiting_translate_lang = False
+        self._translate_text = ""
         # User manager
         if load_env_local:
             load_env_local() # Load environment variables at startup
@@ -246,57 +247,65 @@ class ChatScreen(BoxLayout):
         self.text_input.text = ''
 
     def perform_backend_task(self, user_text, spinner):
-        try:
-            if self.awaiting_advisory:
-                if get_crop_advice:
-                    crop = user_text.strip()
-                    advice = get_crop_advice(crop)
-                    self.add_bubble("=== STRUCTURED ADVISORY ===", is_user=False)
-                    import json
-                    self.add_bubble(json.dumps(advice, indent=2, ensure_ascii=False), is_user=False)
-                    self.add_bubble("=== FORMATTED ADVISORY ===", is_user=False)
-                    self.add_bubble(advice['formatted'], is_user=False)
-                #else:
-                #    response_text = "Advisory module not available."
-                self.awaiting_advisory = False
-            elif self.awaiting_faq:
-                if FAQ:
-                    faq = FAQ()
-                    results = faq.search(user_text, use_llm=True)
-                    if results:
-                        answer = results[0].get('answer', '')
-                        self.add_bubble(f"LLM FAQ Response:", is_user=False)
-                        self.add_bubble(answer, is_user=False)
-                        if speak:
-                            speak(answer)
+        import threading
+        from kivy.clock import Clock
+
+        def run_task():
+            result_bubbles = []
+            try:
+                if self.awaiting_advisory:
+                    if get_crop_advice:
+                        crop = user_text.strip()
+                        advice = get_crop_advice(crop)
+                        import json
+                        result_bubbles.append(("=== STRUCTURED ADVISORY ===", False))
+                        result_bubbles.append((json.dumps(advice, indent=2, ensure_ascii=False), False))
+                        result_bubbles.append(("=== FORMATTED ADVISORY ===", False))
+                        result_bubbles.append((advice['formatted'], False))
+                    self.awaiting_advisory = False
+                elif self.awaiting_faq:
+                    if FAQ:
+                        faq = FAQ()
+                        results = faq.search(user_text, use_llm=True)
+                        if results:
+                            answer = results[0].get('answer', '')
+                            result_bubbles.append((f"LLM FAQ Response:", False))
+                            result_bubbles.append((answer, False))
+                            if speak:
+                                speak(answer)
+                        else:
+                            result_bubbles.append(("No response from LLM.", False))
                     else:
-                        self.add_bubble("No response from LLM.", is_user=False)
-                else:
-                    self.add_bubble("FAQ module not available.", is_user=False)
-                self.awaiting_faq = False
-            elif self.awaiting_translate_text:
-                self._translate_text = user_text.strip()
-                self.add_bubble("Enter target language code (hi=Hindi, ta=Tamil, te=Telugu, kn=Kannada, ml=Malayalam):", is_user=False)
-                self.awaiting_translate_lang = True
-                self.awaiting_translate_text = False
-            elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
-                tgt_lang = user_text.strip() or "hi"
-                if OfflineTranslator:
-                    translator = OfflineTranslator()
-                    translated = translator.translate(self._translate_text, "en", tgt_lang)
-                    if translated.startswith("[Error]"):
-                        self.add_bubble(f"Translation failed: {translated}", is_user=False)
+                        result_bubbles.append(("FAQ module not available.", False))
+                    self.awaiting_faq = False
+                elif self.awaiting_translate_text:
+                    self._translate_text = user_text.strip()
+                    result_bubbles.append(("Enter target language code (hi=Hindi, ta=Tamil, te=Telugu, kn=Kannada, ml=Malayalam):", False))
+                    self.awaiting_translate_lang = True
+                    self.awaiting_translate_text = False
+                elif hasattr(self, 'awaiting_translate_lang') and self.awaiting_translate_lang:
+                    tgt_lang = user_text.strip() or "hi"
+                    if OfflineTranslator:
+                        translator = OfflineTranslator()
+                        translated = translator.translate(self._translate_text, "en", tgt_lang)
+                        if translated.startswith("[Error]"):
+                            result_bubbles.append((f"Translation failed: {translated}", False))
+                        else:
+                            result_bubbles.append((f"Translation: {translated}", False))
                     else:
-                        self.add_bubble(f"Translation: {translated}", is_user=False)
+                        result_bubbles.append(("Translation unavailable.", False))
+                    self.awaiting_translate_lang = False
                 else:
-                    self.add_bubble("Translation unavailable.", is_user=False)
-                self.awaiting_translate_lang = False               
-            else:
-                self.add_bubble("Sorry, I didn't understand. Try using a feature button.", is_user=False)                
-        finally:
-            # Remove loading indicator and re-enable input
-            self.chat_history.remove_widget(spinner)
-            self.text_input.disabled = False
+                    result_bubbles.append(("Sorry, I didn't understand. Try using a feature button.", False))
+            except Exception as e:
+                result_bubbles.append((f"Critical error: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_task).start()
 
 class FarmerAgentApp(App):
     def build(self):
