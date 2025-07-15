@@ -6,8 +6,8 @@ The Farmer Agent is an AI-powered tool designed to provide tailored agricultural
 ## Key Features
 
 
-1. **Voice, Text, and Image Input:** Easy communication through voice commands, text inputs, or image uploads.
-2. **Multilingual NLP:** Understands and responds in regional languages and dialects.
+1. **Voice, Text, and Image Input:** Easy communication through voice commands (with automatic language detection), text inputs, or image uploads. The UI features a mic button for speech-to-text: press to start recording, press again to stop and transcribe.
+2. **Multilingual NLP & Speech-to-Text:** Understands and responds in regional languages and dialects. Speech-to-text is powered by Whisper (OpenAI), supporting all major Indian languages and automatic language detection from audio (no manual language selection needed).
 3. **Plant Identification via Computer Vision:** Detects plant species and diseases using image input.
 4. **Personalized Crop Advisory:** Integrates soil, weather, and market data to give tailored advice.
 5. **Climate-Smart Recommendations:** Encourages sustainable practices and water-saving techniques.
@@ -34,7 +34,8 @@ The Farmer Agent is an AI-powered tool designed to provide tailored agricultural
 
 - Python 3.7 or later
 - pip (Python package installer)
-- SpeechRecognition library for voice processing
+- [openai-whisper](https://github.com/openai/whisper) for speech-to-text (required for both CLI and UI)
+- [pyaudio](https://pypi.org/project/PyAudio/) for microphone input (required for both CLI and UI)
 - Transformers library from Hugging Face for NLP and computer vision
 - Requests library for API integrations
 
@@ -73,6 +74,18 @@ python farmer_agent/main.py
 python farmer_agent/ui/interface.py
 ```
 
+### Speech-to-Text (STT)
+
+**CLI:**
+You can use the mic or an audio file for speech input. Example:
+```bash
+python farmer_agent/nlp/stt.py --mic           # Record from mic, auto language detection
+python farmer_agent/nlp/stt.py --file path/to/audio.wav  # Transcribe audio file
+```
+
+**UI:**
+Press the mic button to start recording, and press again to stop. The recognized text and detected language will be shown in the chat.
+
 ### Calendar & Reminders (CLI/UI)
 - View crop schedules, list all crops, add/delete reminders, add recurring reminders, and get next activity for any crop.
 - All features are available in both CLI and UI via menu or button.
@@ -85,6 +98,15 @@ python farmer_agent/ui/interface.py
 - Weather estimation uses OpenWeatherMap API (API key required in `env.local`).
 
 ## Example Output
+
+**Speech-to-Text Example (UI):**
+```
+User presses mic button...
+Recording... (speak in any supported language)
+User presses mic button again.
+Recognized Text: नमस्ते, मैं किसान हूँ
+Detected Language: hi
+```
 
 ```plaintext
 Based on your input, we recommend the following: ...
