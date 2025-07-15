@@ -172,8 +172,9 @@ class ChatScreen(BoxLayout):
 
     def weather_action(self, instance):
         if WeatherEstimator:
-            self.add_bubble("Please enter your location for weather estimation:", is_user=False)
-            self.awaiting_weather = True
+            self.weather_inputs = {}
+            self.add_bubble("Enter season (summer/monsoon/winter, blank for auto):", is_user=False)
+            self.awaiting_weather_season = True
         else:
             self.add_bubble("Weather module not available.", is_user=False)
 
@@ -249,17 +250,61 @@ class ChatScreen(BoxLayout):
                 else:
                     self.add_bubble("FAQ module not available.", is_user=False)
                 self.awaiting_faq = False
-            elif self.awaiting_weather:
+            elif hasattr(self, 'awaiting_weather_online') and self.awaiting_weather_online:
+                self.weather_inputs['use_online'] = user_text.strip().lower() == 'y'
+                self.add_bubble("Enter season (summer/monsoon/winter, blank for auto):", is_user=False)
+                self.awaiting_weather_online = False
+                self.awaiting_weather_season = True
+            elif hasattr(self, 'awaiting_weather_season') and self.awaiting_weather_season:
+                self.weather_inputs = getattr(self, 'weather_inputs', {})
+                self.weather_inputs['season'] = user_text.strip() or None
+                self.add_bubble("Enter location (optional):", is_user=False)
+                self.awaiting_weather_season = False
+                self.awaiting_weather_location = True
+            elif hasattr(self, 'awaiting_weather_location') and self.awaiting_weather_location:
+                self.weather_inputs['location'] = user_text.strip() or None
+                self.add_bubble("Enter crop (optional):", is_user=False)
+                self.awaiting_weather_location = False
+                self.awaiting_weather_crop = True
+            elif hasattr(self, 'awaiting_weather_crop') and self.awaiting_weather_crop:
+                self.weather_inputs['crop'] = user_text.strip() or None
+                self.add_bubble("Enter date (YYYY-MM-DD, blank for today):", is_user=False)
+                self.awaiting_weather_crop = False
+                self.awaiting_weather_date = True
+            elif hasattr(self, 'awaiting_weather_date') and self.awaiting_weather_date:
+                from datetime import datetime
+                date_str = user_text.strip()
+                date = None
+                if date_str:
+                    try:
+                        date = datetime.strptime(date_str, "%Y-%m-%d")
+                    except Exception:
+                        self.add_bubble("Invalid date format, using today.", is_user=False)
+                self.weather_inputs['date'] = date
                 if WeatherEstimator:
-                    estimator = WeatherEstimator()
-                    season = user_text.strip()
-                    weather = estimator.estimate(season if season else None)
+                    estimator = WeatherEstimator(openweather_api_key="5fd03eb1df84e177df96229a5eabe09e")
+                    weather = estimator.estimate(
+                        season=self.weather_inputs.get('season'),
+                        location=self.weather_inputs.get('location'),
+                        crop=self.weather_inputs.get('crop'),
+                        date=self.weather_inputs.get('date'),
+                        use_online=True,
+                        prefer_openweather=True
+                    )
                     self.add_bubble("Weather Estimation:", is_user=False)
-                    import json
-                    self.add_bubble(json.dumps(weather, indent=2, ensure_ascii=False), is_user=False)
+                    self.add_bubble(f"Temperature: {weather.get('temperature', 'N/A')}°C", is_user=False)
+                    self.add_bubble(f"Humidity: {weather.get('humidity', 'N/A')}%", is_user=False)
+                    self.add_bubble(f"Rainfall: {weather.get('rainfall', 'N/A')} mm", is_user=False)
+                    self.add_bubble(f"Wind: {weather.get('wind', 'N/A')}", is_user=False)
+                    self.add_bubble(f"Advice: {weather.get('advice', 'N/A')}", is_user=False)
+                    warnings = weather.get('warnings', [])
+                    if warnings:
+                        self.add_bubble("Warnings:", is_user=False)
+                        for w in warnings:
+                            self.add_bubble(f"- {w}", is_user=False)
                 else:
                     self.add_bubble("Weather module not available.", is_user=False)
-                self.awaiting_weather = False
+                self.awaiting_weather_date = False
             elif self.awaiting_calendar:
                 if CropCalendar and Reminders:
                     calendar = CropCalendar()

@@ -33,6 +33,8 @@ def main():
         voice_nav=input("Voice navigation? (y/n): ").lower() == 'y'
     )
 
+    # Weather API key prompt (optional)
+    openweather_api_key = "5fd03eb1df84e177df96229a5eabe09e"
     while True:
         print(acc.format_text("Select Feature:"))
         print("1. Input (Voice/Text/Image)")
@@ -94,11 +96,32 @@ def main():
             print(json.dumps(results, indent=2, ensure_ascii=False))
 
         elif choice == "5":
-            estimator = WeatherEstimator()
-            season = input("Enter season (summer/monsoon/winter, blank for auto): ")
-            weather = estimator.estimate(season if season else None)
+            estimator = WeatherEstimator(openweather_api_key=openweather_api_key)
+            use_online = True
+            prefer_openweather = True
+            season = input("Enter season (summer/monsoon/winter, blank for auto): ").strip() or None
+            location = input("Enter location (optional): ").strip() or None
+            crop = input("Enter crop (optional): ").strip() or None
+            date_str = input("Enter date (YYYY-MM-DD, blank for today): ").strip()
+            from datetime import datetime
+            date = None
+            if date_str:
+                try:
+                    date = datetime.strptime(date_str, "%Y-%m-%d")
+                except Exception:
+                    print("Invalid date format, using today.")
+            weather = estimator.estimate(season=season, location=location, crop=crop, date=date, use_online=use_online, prefer_openweather=prefer_openweather)
             print(acc.format_text("Weather Estimation:"))
-            print(json.dumps(weather, indent=2, ensure_ascii=False))
+            print(f"Temperature: {weather.get('temperature', 'N/A')}°C")
+            print(f"Humidity: {weather.get('humidity', 'N/A')}%")
+            print(f"Rainfall: {weather.get('rainfall', 'N/A')} mm")
+            print(f"Wind: {weather.get('wind', 'N/A')}")
+            print(f"Advice: {weather.get('advice', 'N/A')}")
+            warnings = weather.get('warnings', [])
+            if warnings:
+                print("Warnings:")
+                for w in warnings:
+                    print(f"- {w}")
 
         elif choice == "6":
             analytics = Analytics()
