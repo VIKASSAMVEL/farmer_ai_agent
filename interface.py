@@ -6,18 +6,61 @@ from farmer_agent.nlp.cv import PlantIdentifier
 from farmer_agent.main import agentic_response
 
 # --- ChatBubble for chat display ---
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-class ChatBubble(Label):
+from kivy.graphics import Color, RoundedRectangle
+
+class ChatBubble(BoxLayout):
     def __init__(self, text, is_user=False, **kwargs):
-        super().__init__(**kwargs)
-        self.text = text
-        self.size_hint_y = None
-        self.height = 40
-        self.halign = 'right' if is_user else 'left'
-        self.valign = 'middle'
-        self.color = (1, 1, 1, 1) if is_user else (0.9, 0.9, 0.9, 1)
-        self.text_size = (600, None)
-        self.markup = True
+        super().__init__(orientation='horizontal', size_hint_y=None, height=60, padding=[10, 5, 10, 5], **kwargs)
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%H:%M')
+        self.bubble_color = (0.2, 0.6, 0.2, 1) if is_user else (0.9, 0.9, 0.9, 1)
+        self.label = Label(
+            text=text,
+            size_hint_x=0.85,
+            halign='right' if is_user else 'left',
+            valign='middle',
+            color=(1, 1, 1, 1) if is_user else (0, 0, 0, 1),
+            text_size=(550, None),
+            markup=True
+        )
+        self.timestamp_label = Label(
+            text=timestamp,
+            size_hint_x=0.15,
+            font_size=12,
+            color=(0.5, 0.5, 0.5, 1),
+            halign='right',
+            valign='bottom'
+        )
+        self.add_widget(self.label)
+        self.add_widget(self.timestamp_label)
+        # Draw drop shadow first, then bubble background
+        with self.canvas.before: # type: ignore
+            # Shadow (slightly offset, semi-transparent)
+            Color(0, 0, 0, 0.18)
+            self.shadow_rect = RoundedRectangle(radius=[17], pos=(self.pos[0]+2, self.pos[1]-2), size=(self.size[0], self.size[1]))
+            # Bubble background
+            self.bg_color_instruction = Color(*self.bubble_color)
+            self.bg_rect = RoundedRectangle(radius=[15], pos=self.pos, size=self.size)
+        self.bind(pos=self._update_bg_rect, size=self._update_bg_rect) # type: ignore
+
+    def _update_bg_rect(self, *args):
+        # Update shadow position and size
+        if hasattr(self, 'shadow_rect'):
+            self.shadow_rect.pos = (self.pos[0]+2, self.pos[1]-2)
+            self.shadow_rect.size = (self.size[0], self.size[1])
+        # Update bubble background
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
+        # The widgets are already added in __init__, so no need to add again.
+        # If you want to update, just update their properties.
+        # self.add_widget(self.label)
+        # self.add_widget(self.timestamp_label)
+
+    def _update_bg(self, *args):
+        pass
 
 # --- REWRITTEN KIVY GUI TO MIRROR main.py LOGIC WITH DEBUGGER ---
 import traceback
@@ -62,37 +105,102 @@ class ChatScreen(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        # Chat history area
-        self.chat_history = GridLayout(cols=1, spacing=10, size_hint_y=None)
-        self.chat_history.bind(minimum_height=self.chat_history.setter('height')) # type: ignore # Fix: Use bind for height
-        self.scroll = ScrollView(size_hint=(1, 0.7))
+        # Header
+        from kivy.core.window import Window
+        def get_scaled(val):
+            # Scale value based on window width (base 800px)
+            return int(val * Window.width / 800)
+        header = BoxLayout(size_hint=(1, 0.08), padding=[0, get_scaled(8), 0, get_scaled(8)])
+        header_label = Label(text='Farmer AI Agent', font_size=get_scaled(28), bold=True, color=(0.2, 0.6, 0.2, 1))
+        header.add_widget(header_label)
+        self.add_widget(header)
+        # Chat history area with more padding
+        chat_area = BoxLayout(size_hint=(1, 0.62), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
+        self.chat_history = GridLayout(cols=1, spacing=get_scaled(14), size_hint_y=None)
+        self.chat_history.bind(minimum_height=self.chat_history.setter('height')) # type: ignore
+        self.scroll = ScrollView(size_hint=(1, 1))
         self.scroll.add_widget(self.chat_history)
-        self.add_widget(self.scroll)
-        # Input area
-        input_layout = BoxLayout(size_hint=(1, 0.1))
-        self.text_input = TextInput(size_hint=(0.8, 1), multiline=False)
-        send_btn = Button(text='Send', size_hint=(0.2, 1))
+        chat_area.add_widget(self.scroll)
+        self.add_widget(chat_area)
+        # Divider between chat and input area
+        from kivy.uix.widget import Widget
+        from kivy.graphics import Color, Rectangle
+        class Divider(Widget):
+            def __init__(self, **kwargs):
+                super().__init__(size_hint=(1, None), height=2, **kwargs)
+                with self.canvas: # type: ignore
+                    Color(0.8, 0.8, 0.8, 1)
+                    self.rect = Rectangle(pos=self.pos, size=(self.width, 2))
+                self.bind(pos=self._update_rect, size=self._update_rect) # type: ignore
+            def _update_rect(self, *args):
+                self.rect.pos = self.pos
+                self.rect.size = (self.width, 2)
+        self.add_widget(Divider())
+        # Input area with more spacing
+        input_layout = BoxLayout(size_hint=(1, 0.12), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)], spacing=get_scaled(12))
+        # Modern TextInput with rounded background and placeholder
+        from kivy.uix.widget import Widget
+        from kivy.graphics import Color, RoundedRectangle
+        class RoundedInput(TextInput):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.background_color = (0, 0, 0, 0)
+                self.hint_text = 'Type your message...'
+                self.font_size = get_scaled(18)
+                self.padding = [get_scaled(16), get_scaled(12), get_scaled(16), get_scaled(12)]
+                # Accessibility label removed (unsupported)
+                with self.canvas.before: # type: ignore
+                    Color(0.95, 0.95, 0.95, 1)
+                    self.bg_rect = RoundedRectangle(radius=[get_scaled(18)], pos=self.pos, size=self.size)
+                self.bind(pos=self._update_bg, size=self._update_bg) # type: ignore
+            def _update_bg(self, *args):
+                self.bg_rect.pos = self.pos
+                self.bg_rect.size = self.size
+        self.text_input = RoundedInput(size_hint=(0.8, 1), multiline=False)
+        # Modern Send button with color and rounded corners
+        class RoundedButton(Button):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.background_normal = ''
+                self.background_color = (0.2, 0.6, 0.2, 1)
+                self.color = (1, 1, 1, 1)
+                self.font_size = get_scaled(18)
+                # Accessibility label removed (unsupported)
+                with self.canvas.before: # type: ignore
+                    Color(0.2, 0.6, 0.2, 1)
+                    self.bg_rect = RoundedRectangle(radius=[get_scaled(18)], pos=self.pos, size=self.size)
+                self.bind(pos=self._update_bg, size=self._update_bg) # type: ignore
+            def _update_bg(self, *args):
+                self.bg_rect.pos = self.pos
+                self.bg_rect.size = self.size
+        send_btn = RoundedButton(text='Send', size_hint=(0.2, 1))
         send_btn.bind(on_release=self.send_message) # type: ignore
         input_layout.add_widget(self.text_input)
         input_layout.add_widget(send_btn)
         self.add_widget(input_layout)
         # Feature buttons
-        feature_layout = BoxLayout(size_hint=(1, 0.2), spacing=8, padding=[8, 8, 8, 0])
+        feature_layout = BoxLayout(size_hint=(1, 0.18), spacing=get_scaled(10), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
         self.feature_buttons = {
-            "Input": Button(text="Input", on_press=self.input_action),
-            "Advisory": Button(text="Advisory", on_press=self.advisory_action),
-            "Calendar": Button(text="Calendar", on_press=self.calendar_action),
-            "FAQ": Button(text="FAQ", on_press=self.faq_action),
-            "Weather": Button(text="Weather", on_press=self.weather_action),
-            "Translate": Button(text="Translate", on_press=self.translate_action),
-            "Analytics": Button(text="Analytics", on_press=self.analytics_action),
-            "TTS Voices": Button(text="TTS Voices", on_press=self.tts_voices_action),
-            "Clear History": Button(text="Clear History", on_press=self.clear_history_action), # Fix Indentation
-            "Exit": Button(text="Exit", on_press=self.exit_action)
+            "Input": Button(text="🎤 Input", on_press=self.input_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Advisory": Button(text="🌱 Advisory", on_press=self.advisory_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Calendar": Button(text="📅 Calendar", on_press=self.calendar_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "FAQ": Button(text="❓ FAQ", on_press=self.faq_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Weather": Button(text="☀️ Weather", on_press=self.weather_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Translate": Button(text="🌐 Translate", on_press=self.translate_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Analytics": Button(text="📊 Analytics", on_press=self.analytics_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "TTS Voices": Button(text="🔊 TTS Voices", on_press=self.tts_voices_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Clear History": Button(text="🧹 Clear History", on_press=self.clear_history_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
+            "Exit": Button(text="🚪 Exit", on_press=self.exit_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16))
         }
         for btn in self.feature_buttons.values():
             feature_layout.add_widget(btn)
         self.add_widget(feature_layout)
+
+        # Footer for branding/accessibility
+        footer = BoxLayout(size_hint=(1, 0.05), padding=[0, get_scaled(4), 0, get_scaled(4)])
+        footer_label = Label(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=get_scaled(14), color=(0.2, 0.6, 0.2, 1))
+        footer.add_widget(footer_label)
+        self.add_widget(footer)
         # State flags
         self.awaiting_advisory = False
         self.awaiting_faq = False
@@ -107,6 +215,7 @@ class ChatScreen(BoxLayout):
         self.awaiting_translate_text = False
         self.awaiting_translate_lang = False
         self._translate_text = ""
+        self.awaiting_weather_date = False  # Ensure attribute exists
         # User manager
         if load_env_local:
             load_env_local() # Load environment variables at startup
@@ -124,12 +233,30 @@ class ChatScreen(BoxLayout):
             self.add_bubble(f"UserManager init error: {e}", is_user=False)
 
     def add_bubble(self, text, is_user=False, log_type='msg'):
-        import datetime
-        bubble = Label(text=text, size_hint_y=None, height=40, halign='right' if is_user else 'left', valign='middle')
+        # Format agent responses for better readability
+        import json
+        formatted_text = text
+        if not is_user:
+            # Try to pretty-print JSON
+            try:
+                if isinstance(text, str) and text.strip().startswith('{') and text.strip().endswith('}'):
+                    obj = json.loads(text)
+                    formatted_text = f"{json.dumps(obj, indent=2, ensure_ascii=False)}"
+                elif isinstance(text, str) and text.strip().startswith('[') and text.strip().endswith(']'):
+                    obj = json.loads(text)
+                    if isinstance(obj, list):
+                        formatted_text = "\n".join([f"• {item}" for item in obj])
+                elif isinstance(text, str) and '\n' in text:
+                    # Multi-line text, use default font for tabular/code
+                    formatted_text = text
+            except Exception:
+                pass
+        bubble = ChatBubble(formatted_text, is_user=is_user)
         self.chat_history.add_widget(bubble)
         self.chat_history.height = self.chat_history.minimum_height
         self.scroll.scroll_y = 0
         # --- Logging to file with timestamp and duplicate prevention ---
+        import datetime
         try:
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             prefix = '[USER]' if is_user else '[AGENT]'
@@ -154,7 +281,6 @@ class ChatScreen(BoxLayout):
         except Exception as e:
             # Log error to file
             try:
-                import datetime
                 timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 with open('kivy_chat_log.txt', 'a', encoding='utf-8') as logf:
                     logf.write(f'{timestamp} [ERROR]: {str(e)}\n')
@@ -166,54 +292,174 @@ class ChatScreen(BoxLayout):
         self.add_bubble("Input Modes: 1. Voice (mic) 2. Audio File 3. Text 4. Image", is_user=False)
         # You can add mic button logic here as in previous versions
     def advisory_action(self, instance):
-        self.add_bubble("Please enter your crop name for advisory:", is_user=False)
-        self.awaiting_advisory = True
+        # Example crop list, can be loaded from config/crops.json
+        crop_list = ["Tomato", "Rice", "Wheat", "Maize", "Potato", "Onion", "Cotton", "Sugarcane"]
+        from kivy.uix.spinner import Spinner
+        self.add_bubble("Select your crop for advisory:", is_user=False)
+        crop_spinner = Spinner(
+            text="Select Crop",
+            values=crop_list,
+            size_hint=(None, None),
+            size=(200, 44),
+            pos_hint={'center_x': 0.5}
+        )
+        def on_crop_select(spinner, text):
+            self.text_input.text = text
+            self.awaiting_advisory = True
+            self.chat_history.remove_widget(crop_spinner)
+        crop_spinner.bind(text=on_crop_select)#type:ignore
+        self.chat_history.add_widget(crop_spinner)
+
     def calendar_action(self, instance):
-        self.add_bubble("Calendar feature coming soon!", is_user=False)
+        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        import threading
+        from kivy.clock import Clock
+        def run_calendar():
+            result_bubbles = []
+            try:
+                result_bubbles.append(("Calendar feature coming soon!", False))
+            except Exception as e:
+                result_bubbles.append((f"Calendar error: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_calendar).start()
     def faq_action(self, instance):
-        self.add_bubble("Please enter your question or keyword for FAQ:", is_user=False)
-        self.awaiting_faq = True
+        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        import threading
+        from kivy.clock import Clock
+        def run_faq():
+            result_bubbles = []
+            try:
+                self.awaiting_faq = True
+                result_bubbles.append(("Please enter your question or keyword for FAQ:", False))
+            except Exception as e:
+                result_bubbles.append((f"FAQ error: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_faq).start()
     def weather_action(self, instance):
-        try:
-            from farmer_agent.data.weather import WeatherEstimator
-            estimator = WeatherEstimator()
-            location = estimator.get_current_location()
-            if location:
-                self.add_bubble(f"Detected location: {location}", is_user=False)
-                weekly = estimator.fetch_weekly_forecast(location)
-                if weekly:
-                    import json
-                    self.add_bubble(f"7-Day Weather Forecast for {location}:", is_user=False)
-                    self.add_bubble(json.dumps(weekly, indent=2, ensure_ascii=False), is_user=False)
-                    tips = estimator.get_llm_weather_tips(weekly)
-                    self.add_bubble("LLM Tips for Farmers:", is_user=False)
-                    self.add_bubble(tips, is_user=False)
+        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        import threading
+        from kivy.clock import Clock
+        def run_weather():
+            result_bubbles = []
+            try:
+                from farmer_agent.data.weather import WeatherEstimator
+                estimator = WeatherEstimator()
+                location = estimator.get_current_location()
+                if location:
+                    result_bubbles.append((f"Detected location: {location}", False))
+                    weekly = estimator.fetch_weekly_forecast(location)
+                    if weekly:
+                        import json
+                        result_bubbles.append((f"7-Day Weather Forecast for {location}:", False))
+                        result_bubbles.append((json.dumps(weekly, indent=2, ensure_ascii=False), False))
+                        tips = estimator.get_llm_weather_tips(weekly)
+                        result_bubbles.append(("LLM Tips for Farmers:", False))
+                        result_bubbles.append((tips, False))
+                    else:
+                        result_bubbles.append(("Could not fetch weekly forecast. Check API key or location.", False))
                 else:
-                    self.add_bubble("Could not fetch weekly forecast. Check API key or location.", is_user=False)
-            else:
-                self.add_bubble("Could not detect location.", is_user=False)
-        except Exception as e:
-            self.add_bubble(f"Weather error: {str(e)}", is_user=False)
+                    result_bubbles.append(("Could not detect location.", False))
+            except Exception as e:
+                result_bubbles.append((f"Weather error: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_weather).start()
     def translate_action(self, instance):
-        self.add_bubble("Enter text to translate from English:", is_user=False)
-        self.awaiting_translate_text = True
+        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        import threading
+        from kivy.clock import Clock
+        def run_translate():
+            result_bubbles = []
+            try:
+                self.awaiting_translate_text = True
+                result_bubbles.append(("Enter text to translate from English:", False))
+            except Exception as e:
+                result_bubbles.append((f"Translate error: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_translate).start()
     def analytics_action(self, instance):
-        self.add_bubble("Analytics feature coming soon!", is_user=False)
+        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        import threading
+        from kivy.clock import Clock
+        def run_analytics():
+            result_bubbles = []
+            try:
+                if Analytics:
+                    analytics = Analytics()
+                    result_bubbles.append(("User Activity Summary:", False))
+                    import json
+                    result_bubbles.append((json.dumps(analytics.user_activity_summary('default'), indent=2, ensure_ascii=False), False))
+                    result_bubbles.append(("Crop Trends:", False))
+                    result_bubbles.append((json.dumps(analytics.crop_trends(), indent=2, ensure_ascii=False), False))
+                else:
+                    result_bubbles.append(("Analytics module not available.", False))
+            except Exception as e:
+                result_bubbles.append((f"Error in analytics: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_analytics).start()
     def tts_voices_action(self, instance):
-        try:
-            if list_voices:
-                import io
-                import contextlib
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    list_voices()
-                voices = buf.getvalue()
-                self.add_bubble("Available TTS Voices:", is_user=False)
-                self.add_bubble(voices, is_user=False)
-            else:
-                self.add_bubble("TTS Voices module not available.", is_user=False)
-        except Exception as e:
-            show_debug_popup(traceback.format_exc())
+        spinner = Spinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.chat_history.add_widget(spinner)
+        self.text_input.disabled = True
+        import threading
+        from kivy.clock import Clock
+        def run_tts_voices():
+            result_bubbles = []
+            try:
+                if list_voices:
+                    import io
+                    import contextlib
+                    buf = io.StringIO()
+                    with contextlib.redirect_stdout(buf):
+                        list_voices()
+                    voices = buf.getvalue()
+                    result_bubbles.append(("Available TTS Voices:", False))
+                    result_bubbles.append((voices, False))
+                else:
+                    result_bubbles.append(("TTS Voices module not available.", False))
+            except Exception as e:
+                result_bubbles.append((f"TTS Voices error: {str(e)}", False))
+            def update_ui(dt):
+                self.chat_history.remove_widget(spinner)
+                self.text_input.disabled = False
+                for text, is_user in result_bubbles:
+                    self.add_bubble(text, is_user=is_user)
+            Clock.schedule_once(update_ui, 0)
+        threading.Thread(target=run_tts_voices).start()
     def clear_history_action(self, instance):
         try:
             if hasattr(self, 'user_manager') and self.user_manager and self.user_manager.current_user:
@@ -229,6 +475,20 @@ class ChatScreen(BoxLayout):
     # --- Main Message Handler ---
     def send_message(self, instance):
         user_text = self.text_input.text.strip()
+        # Input validation for crop names (advisory, calendar)
+        if self.awaiting_advisory or self.awaiting_calendar:
+            crop_list = ["Tomato", "Rice", "Wheat", "Maize", "Potato", "Onion", "Cotton", "Sugarcane"]
+            if user_text not in crop_list:
+                self.add_bubble(f"Invalid crop name. Please select from: {', '.join(crop_list)}", is_user=False)
+                return
+        # Input validation for date (weather)
+        if hasattr(self, 'awaiting_weather_date') and self.awaiting_weather_date:
+            import re
+            date_str = user_text
+            if date_str:
+                if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+                    self.add_bubble("Invalid date format. Please use YYYY-MM-DD.", is_user=False)
+                    return
         if not user_text:
             return
         self.add_bubble(user_text, is_user=True)

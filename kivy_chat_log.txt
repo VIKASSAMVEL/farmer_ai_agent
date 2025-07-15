@@ -19,3 +19,36 @@ Tomatoes are one of the most popular and versatile fruits (yes, they're a fruit!
 7. **Gardening tips**: Tomatoes are relatively easy to grow at home. Make sure your plants get plenty of sunlight, water them regularly, and provide support as they grow.
 
 What's your favorite way to enjoy tomatoes?
+2025-07-15 22:11:00 [AGENT]: Calendar feature coming soon!
+2025-07-15 22:11:02 [AGENT]: Select your crop for advisory:
+2025-07-15 22:11:07 [USER]: Tomato
+2025-07-15 22:11:07 [AGENT]: Waiting for response...
+2025-07-15 22:11:07 [AGENT]: === STRUCTURED ADVISORY ===
+2025-07-15 22:11:07 [AGENT]: {
+  "crop": "Tomato",
+  "recommended_soil": "Sandy Loam",
+  "current_soil": "N/A",
+  "soil_notes": "N/A",
+  "market_price": 1.5,
+  "climate_smart_tips": [
+    "Use drip irrigation to save water.",
+    "Apply organic mulch for moisture retention."
+  ],
+  "care_instructions": [
+    "Check for leaf spots weekly.",
+    "Fertilize with compost every 2 weeks."
+  ],
+  "formatted": "Crop: Tomato\nRecommended Soil: Sandy Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 1.5\nClimate-Smart Tips:\n- Use drip irrigation to save water.\n- Apply organic mulch for moisture retention.\nCare Instructions:\n- Check for leaf spots weekly.\n- Fertilize with compost every 2 weeks."
+}
+2025-07-15 22:11:07 [AGENT]: === FORMATTED ADVISORY ===
+2025-07-15 22:11:07 [AGENT]: Crop: Tomato
+Recommended Soil: Sandy Loam
+Current Soil: N/A
+Soil Notes: N/A
+Market Price: 1.5
+Climate-Smart Tips:
+- Use drip irrigation to save water.
+- Apply organic mulch for moisture retention.
+Care Instructions:
+- Check for leaf spots weekly.
+- Fertilize with compost every 2 weeks.
