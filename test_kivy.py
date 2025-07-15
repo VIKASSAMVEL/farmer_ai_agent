@@ -28,12 +28,12 @@ logging.basicConfig(
 )
 
 # Register DejaVuSans.ttf from C drive if available, else fallback to default
-dejavu_path = 'C:\\DejaVuSans.ttf'
+dejavu_path = 'C:\Windows\Fonts\DejaVuSans.ttf'
 if os.path.isfile(dejavu_path):
     LabelBase.register(name='DejaVuSans', fn_regular=dejavu_path)
     default_font = 'DejaVuSans'
 else:
-    logging.warning('DejaVuSans.ttf not found at C:\\DejaVuSans.ttf, using default font.')
+    logging.warning('DejaVuSans.ttf not found at C:\DejaVuSans.ttf, using default font.')
     default_font = None
 
 # Backend imports with error handling

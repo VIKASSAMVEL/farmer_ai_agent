@@ -135,7 +135,7 @@ if __name__ == "__main__":
         try:
             stt.record_from_mic()
             while True:
-                stt.append_mic_frame()
+                pass  # Recording in background thread; wait for KeyboardInterrupt
         except KeyboardInterrupt:
             print("\nStopping recording and transcribing...")
             audio_path = stt.stop_recording_from_mic()
