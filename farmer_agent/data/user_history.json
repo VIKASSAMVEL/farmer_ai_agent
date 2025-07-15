@@ -1,9 +1,52 @@
 {
   "deva": {
-    "queries": [],
+    "queries": [
+      {
+        "query": "Rice, None",
+        "advisory": {
+          "crop": "Rice",
+          "recommended_soil": "Clay Loam",
+          "current_soil": "N/A",
+          "soil_notes": "N/A",
+          "market_price": 0.8,
+          "climate_smart_tips": [
+            "Practice alternate wetting and drying.",
+            "Use drought-resistant varieties."
+          ],
+          "care_instructions": [
+            "Monitor for stem borers.",
+            "Maintain proper water levels."
+          ],
+          "formatted": "Crop: Rice\nRecommended Soil: Clay Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 0.8\nClimate-Smart Tips:\n- Practice alternate wetting and drying.\n- Use drought-resistant varieties.\nCare Instructions:\n- Monitor for stem borers.\n- Maintain proper water levels.",
+          "feedback": "positive"
+        },
+        "timestamp": "2025-07-15T20:46:42.809763"
+      },
+      {
+        "query": "Wheat, None",
+        "advisory": {
+          "crop": "Wheat",
+          "recommended_soil": "Loam",
+          "current_soil": "N/A",
+          "soil_notes": "N/A",
+          "market_price": 1.1,
+          "climate_smart_tips": [
+            "Use zero tillage to conserve soil moisture.",
+            "Rotate crops to improve soil health."
+          ],
+          "care_instructions": [
+            "Apply nitrogen fertilizer at tillering stage.",
+            "Irrigate at critical growth stages."
+          ],
+          "formatted": "Crop: Wheat\nRecommended Soil: Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 1.1\nClimate-Smart Tips:\n- Use zero tillage to conserve soil moisture.\n- Rotate crops to improve soil health.\nCare Instructions:\n- Apply nitrogen fertilizer at tillering stage.\n- Irrigate at critical growth stages.",
+          "feedback": "positive"
+        },
+        "timestamp": "2025-07-15T20:54:07.814783"
+      }
+    ],
     "meta": {
       "created_at": "2025-07-15T11:28:21.399269",
-      "last_active": "2025-07-15T20:25:37.927260"
+      "last_active": "2025-07-15T20:54:07.814783"
     }
   }
 }

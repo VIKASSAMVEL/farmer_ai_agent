@@ -55,7 +55,7 @@ class ChatBubble(MDBoxLayout):
         bubble_color = (33/255, 194/255, 94/255, 1) if is_user else (27/255, 38/255, 59/255, 1)
         shadow_color = (0, 0, 0, 0.22)
         avatar_size = 40
-        avatar_text = '🧑' if is_user else '🤖'
+        avatar_text = '🧑' if is_user else '🌾'  # Changed bot avatar
         avatar = MDLabel(text=avatar_text, font_style='H5', size_hint=(None, None), size=(avatar_size, avatar_size), theme_text_color='Custom', text_color=(0.2, 0.4, 1, 1))
         self.label = MDLabel(
             text=text,
@@ -63,8 +63,8 @@ class ChatBubble(MDBoxLayout):
             halign='right' if is_user else 'left',
             valign='middle',
             theme_text_color='Custom',
-            text_color=(0.2, 0.4, 1, 1),
-            font_style='Body1',
+            text_color=(1, 1, 1, 1) if is_user else (0.9, 0.9, 0.9, 1),  # Light text for better readability
+            font_style='Body2',  # Slightly smaller font
             opacity=0
         )
         self.label.bind(texture_size=self._update_height)
@@ -74,7 +74,7 @@ class ChatBubble(MDBoxLayout):
             font_style='Caption',
             theme_text_color='Custom',
             text_color=(0.2, 0.4, 1, 1),
-            halign='right',
+            halign='left' if is_user else 'right',  # Timestamps on opposite sides
             valign='bottom'
         )
         # Layout: avatar | bubble | timestamp (user right, agent left)
@@ -92,7 +92,7 @@ class ChatBubble(MDBoxLayout):
 
     def _update_height(self, *args):
         min_height = 48
-        padding = 28
+        padding = 24 # Adjusted padding
         self.label.height = max(self.label.texture_size[1] + padding, min_height)
         self.height = self.label.height + 12
 
@@ -116,10 +116,10 @@ class ChatScreen(MDBoxLayout):
         self.orientation = 'vertical'
         self.state = {"mode": None, "context": {}}
         # Professional dark background with rounded corners
-        from kivy.graphics import Color, RoundedRectangle
-        self._bg_color = Color(0.07, 0.09, 0.13, 1)
-        self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[32])
-        self.canvas.before.add(self._bg_color)
+        from kivy.graphics import Color, RoundedRectangle, BorderImage
+        self.canvas.before.add(Color(0.07, 0.09, 0.13, 1))  # Dark background
+        self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[32])  # Rounded rectangle shape
+        # Add a subtle border
         self.canvas.before.add(self.bg_rect)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
@@ -143,19 +143,19 @@ class ChatScreen(MDBoxLayout):
         )
         self.mode_menu.caller = self.mode_btn
         self.mode_btn.bind(on_release=lambda x: self.mode_menu.open())
-        mode_bar.add_widget(self.mode_btn)
+        mode_bar.add_widget(self.mode_btn)  # Keep mode button
         self.language_btn = MDRaisedButton(text="🌐 Language", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=ChatScreen.get_scaled(18))
         self.language_dropdown = MDDropdownMenu(
             caller=None,
             items=[
                 {"text": "English", "on_release": lambda: self.set_language('en')},
                 {"text": "தமிழ்", "on_release": lambda: self.set_language('ta')},
-                # Add more languages as needed
+                # Add more languages as needed, e.g., {"text": "हिन्दी", "on_release": lambda: self.set_language('hi')},
             ]
         )
         self.language_dropdown.caller = self.language_btn
         self.language_btn.bind(on_release=lambda x: self.language_dropdown.open())
-        mode_bar.add_widget(self.language_btn)
+        mode_bar.add_widget(self.language_btn)  # Keep language button
         self.add_widget(mode_bar)
 
         # --- Chat history area ---
@@ -171,7 +171,7 @@ class ChatScreen(MDBoxLayout):
         class Divider(MDBoxLayout):
             def __init__(self, **kwargs):
                 super().__init__(size_hint=(1, None), height=2, **kwargs)
-                with self.canvas:  # type: ignore
+                with self.canvas:
                     Color(0.8, 0.8, 0.8, 1)
                     from kivy.graphics import Rectangle
                     self.rect = Rectangle(pos=self.pos, size=(self.width, 2))
@@ -184,8 +184,30 @@ class ChatScreen(MDBoxLayout):
         # --- Input options for input type dropdown ---
         self.input_options = [
             ("Text", self.set_input_text),
-            ("Image", self.set_input_image)
+            ("Image", self.set_input_image),
+            ("Voice", self.set_input_voice)
         ]
+    def set_input_voice(self):
+        self.input_menu.dismiss()
+        # Do not disable or remove the input field, just update its text
+        import threading
+        def run_stt():
+            try:
+                from farmer_agent.nlp.stt import recognize_speech
+                result = recognize_speech(source="mic", lang="auto", whisper_model="base")
+                def set_text(dt):
+                    if result and not str(result).startswith('[Error') and result.strip() and result.strip() != '[Mic Recording Started]':
+                        self.text_input.text = result
+                    else:
+                        self.add_bubble("No speech detected or error.", is_user=False)
+                from kivy.clock import Clock
+                Clock.schedule_once(set_text, 0)
+            except Exception as e:
+                def set_error(dt):
+                    self.add_bubble(f"Voice input error: {str(e)}", is_user=False)
+                from kivy.clock import Clock
+                Clock.schedule_once(set_error, 0)
+        threading.Thread(target=run_stt, daemon=True).start()
 
         # --- Input bar (dropdown, text input, send button) ---
         input_bar = MDBoxLayout(size_hint=(1, 0.12), padding=[ChatScreen.get_scaled(16), ChatScreen.get_scaled(8), ChatScreen.get_scaled(16), ChatScreen.get_scaled(8)], spacing=ChatScreen.get_scaled(16))
@@ -232,9 +254,9 @@ class ChatScreen(MDBoxLayout):
                 self.shadow_rect.size = self.size
             def on_touch_down(self, touch):
                 return bool(super().on_touch_down(touch))
-            def on_touch_move(self, touch, *args):
+            def on_touch_move(self, touch, *args):  # Unused argument fix
                 return super().on_touch_move(touch, *args)
-        send_btn = ModernButton(text='🚀 Send', size_hint=(0.2, 1))
+        send_btn = ModernButton(text='➤ Send', size_hint=(0.2, 1))  # Changed send icon
         send_btn.bind(on_release=self.send_message)
         self.mic_btn = None  # Placeholder for mic button
         self.is_recording = False  # Track mic recording state
@@ -273,7 +295,7 @@ class ChatScreen(MDBoxLayout):
 
     # Removed duplicate _update_bg and mode_bar references
 
-    def _update_bg(self, *args):
+    def _update_bg(self, *args):  # This is not a duplicate - belongs to ChatScreen
         if hasattr(self, 'bg_rect'):
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
@@ -359,6 +381,7 @@ class ChatScreen(MDBoxLayout):
         self.add_bubble(f"Language set to: {lang_code}", is_user=False)
 
     def translate_ui(self, lang_code):
+        # Implement UI translation here
         # Translate static UI text
         translations = {
             'en': {
@@ -369,7 +392,7 @@ class ChatScreen(MDBoxLayout):
                 '🌐 Language': '🌐 Language',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design',
             },
-            'ta': {
+             'ta': {  # Tamil example, you can add more languages
                 'Farmer AI Agent': '\u0baa\u0bbe\u0bb0\u0bcd\u0bae\u0bc6\u0bb0\u0bcd \u0a8e\u0b90 \u0b8f\u0b9c\u0bc6\u0ba3\u0bcd\u0b9f\u0bcd',
                 'Select Mode': '\u0bae\u0bc1\u0b9f\u0bbf\u0baf\u0bc8 \u0ba4\u0bc6\u0bb0\u0bbf\u0b99\u0bcd\u0b95',
                 'Input Type': '\u0b87\u0ba9\u0bcd\u0baa\u0bc1\u0b9f\u0bcd \u0b95\u0bcd\u0bb3\u0bbf',
@@ -377,7 +400,8 @@ class ChatScreen(MDBoxLayout):
                 '🌐 Language': '\u0bae\u0bca\u0bb4\u0bbf',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 \u0baa\u0bbe\u0bb0\u0bcd\u0bae\u0bc6\u0bb0\u0bcd \u0b8e\u0b90 \u0b8f\u0b9c\u0bc6\u0ba3\u0bcd\u0b9f\u0bcd | \u0b92\u0baa\u0ba9\u0bcd \u0b9a\u0bcb\u0bb0\u0bcd\u0baa\u0bcd | \u0b85\u0ba3\u0bcd\u0baa\u0bc1\u0b95\u0bae\u0bcd \u0ba8\u0bc6\u0bb1\u0bbf\u0b95\u0bcd\u0b95\u0bc1\u0bae\u0bcd',
             },
-            # Add more language translations as needed
+             # Add more language translations as needed, for example Hindi
+             # 'hi': { ... }
         }
         lang_map = translations.get(lang_code, translations['en'])
         # Update header
@@ -805,7 +829,7 @@ class ChatScreen(MDBoxLayout):
                         self.state["context"]["input_type"] = "mic"
                         # Add mic button if not present
                         if not self.mic_btn:
-                            self.mic_btn = MDRectangleFlatButton(text="🎤 Mic", size_hint=(None, None), size=(60, 44), md_bg_color=(0.2, 0.6, 0.2, 1), text_color=(1, 1, 1, 1))
+                            self.mic_btn = MDRectangleFlatButton(text="🎤 Mic", size_hint=(None, None), size=(120, 44), md_bg_color=(0.2, 0.6, 0.2, 1), text_color=(1, 1, 1, 1))  # Increased mic button width
                             self.mic_btn.bind(on_release=self.start_mic_recording)
                             self.add_widget(self.mic_btn)
                     else:
@@ -869,7 +893,7 @@ class ChatScreen(MDBoxLayout):
                     try:
                         speak(text)
                     except Exception as e:
-                        logging.error(f"speak error: {str(e)}")
+                        logging.exception("Text-to-speech error")
                         self.add_bubble(f"Error in text-to-speech: {str(e)}", is_user=False)
                 self.state["mode"] = None
             elif self.state.get("mode") == "image_path":
