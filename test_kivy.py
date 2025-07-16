@@ -203,6 +203,7 @@ def show_debug_popup(error_msg):
     popup.open()
 
 class ChatScreen(MDBoxLayout):
+
     def add_bubble(self, text, is_user=False):
         import re
         import threading
@@ -246,44 +247,42 @@ class ChatScreen(MDBoxLayout):
                 self.chat_history.remove_widget(spinner_bubble)
                 self.chat_history.height = self.chat_history.minimum_height
 
-        def do_translation():
-            import queue
-            translated = orig_text
-            if not is_user and lang != 'en':
-                try:
-                    # Timeout for translation (5 seconds)
-                    result_queue = queue.Queue()
-                    def target():
-                        try:
-                            result_queue.put(self.llm_translate(orig_text, lang, source_lang='en'))
-                        except Exception:
-                            result_queue.put(None)
-                    t = threading.Thread(target=target)
-                    t.start()
-                    t.join(timeout=5)
-                    if t.is_alive():
-                        translated = orig_text  # fallback to English
-                    else:
-                        try:
-                            result = result_queue.get_nowait()
-                            if result is None:
-                                translated = orig_text
-                            else:
-                                translated = result
-                        except Exception:
-                            translated = orig_text
-                except Exception:
-                    translated = orig_text
-            return translated
-
         try:
-            # If translation may take time, show spinner (on main thread)
-            from kivy.clock import Clock
-            Clock.schedule_once(show_spinner, 0)
-            # Do translation (with timeout)
-            translated_text = do_translation()
-            # Remove spinner if shown
-            remove_spinner()
+            # Only show spinner and translate if not user and not English
+            translated_text = orig_text
+            if not is_user and lang != 'en':
+                from kivy.clock import Clock
+                Clock.schedule_once(show_spinner, 0)
+                def do_translation():
+                    import queue
+                    translated = orig_text
+                    try:
+                        # Timeout for translation (5 seconds)
+                        result_queue = queue.Queue()
+                        def target():
+                            try:
+                                result_queue.put(self.llm_translate(orig_text, lang, source_lang='en'))
+                            except Exception:
+                                result_queue.put(None)
+                        t = threading.Thread(target=target)
+                        t.start()
+                        t.join(timeout=5)
+                        if t.is_alive():
+                            translated = orig_text  # fallback to English
+                        else:
+                            try:
+                                result = result_queue.get_nowait()
+                                if result is None:
+                                    translated = orig_text
+                                else:
+                                    translated = result
+                            except Exception:
+                                translated = orig_text
+                    except Exception:
+                        translated = orig_text
+                    return translated
+                translated_text = do_translation()
+                remove_spinner()
             formatted_text = translated_text
             if not is_user:
                 try:
@@ -320,7 +319,7 @@ class ChatScreen(MDBoxLayout):
 
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
-        self.state = {'mode': None, 'input_type': 'text', 'language': 'en', 'context': {}}
+        self.state = {'mode': 'chat', 'input_type': 'text', 'language': 'en', 'context': {}}
         self.calendar = CropCalendar() if CropCalendar else None
         self.reminders = Reminders() if Reminders else None
         self.voice_output_enabled = False
@@ -354,28 +353,51 @@ class ChatScreen(MDBoxLayout):
         self.mode_btn.bind(on_release=lambda _: self.mode_menu.open())
         self.mode_bar.add_widget(self.mode_btn)
         self.language_btn = MDRaisedButton(
-            text="🌐 Language",
+            text="Language",
             size_hint=(None, 1),
             width=140,
             md_bg_color=(0.13, 0.16, 0.22, 1),
             text_color=(0.8, 0.9, 1, 1),
-            font_size=24
+            font_size=24,
+            font_name=get_font_path('NotoSans-Regular')
         )
+        self._lang_btn_default_bg = (0.13, 0.16, 0.22, 1)
+        self._lang_btn_active_bg = (0.22, 0.28, 0.36, 1)
+        self._lang_btn_default_text = (0.8, 0.9, 1, 1)
+        self._lang_btn_active_text = (1, 1, 1, 1)
         self.supported_languages = [
             ("English", "en"),
             ("தமிழ்", "ta"),
             ("हिन्दी", "hi"),
         ]
-        font_path = get_font_path('NotoSans-Regular')
+        font_paths = {
+            "en": get_font_path('NotoSans-Regular'),
+            "ta": get_font_path('NotoSansTamil-Regular'),
+            "hi": get_font_path('NotoSansDevanagari-Regular'),
+        }
         self.language_dropdown = MDDropdownMenu(
             caller=self.language_btn,
             items=[{
                 "text": name,
                 "on_release": (lambda code=code: self.set_language(code)),
-                "viewclass": "MDLabel",
-                "font_name": font_path
+                "viewclass": "MDRaisedButton",
+                "font_name": font_paths.get(code, font_paths["en"]),
+                "md_bg_color": (0.13, 0.16, 0.22, 1),
+                "text_color": (0.8, 0.9, 1, 1),
+                "font_size": 22,
+                "size_hint_y": None,
+                "height": 48,
+                "radius": [12],
+                "halign": "center"
             } for name, code in self.supported_languages]
         )
+        def on_lang_menu_open(*_):
+            self.language_btn.md_bg_color = self._lang_btn_active_bg
+            self.language_btn.text_color = self._lang_btn_active_text
+        def on_lang_menu_dismiss(*_):
+            self.language_btn.md_bg_color = self._lang_btn_default_bg
+            self.language_btn.text_color = self._lang_btn_default_text
+        self.language_dropdown.bind(on_open=on_lang_menu_open, on_dismiss=on_lang_menu_dismiss)
         self.language_btn.bind(on_release=lambda _: self.language_dropdown.open())
         self.mode_bar.add_widget(self.language_btn)
         self.add_widget(self.mode_bar)
@@ -388,6 +410,9 @@ class ChatScreen(MDBoxLayout):
         self.scroll.add_widget(self.chat_history)
         chat_area.add_widget(self.scroll)
         self.add_widget(chat_area)
+
+        # Now it's safe to show the initial chat bubble
+        self.add_bubble("Chat mode enabled. You can now chat directly with the AI. Type your message:", is_user=False)
 
         # Divider
         self.add_widget(Divider())
@@ -416,7 +441,7 @@ class ChatScreen(MDBoxLayout):
         self.input_btn.bind(on_release=lambda _: self.input_menu.open())
         self.input_bar.add_widget(self.input_btn)
         self.text_input = ModernInput(size_hint=(0.8, 1), multiline=False)
-        send_btn = ModernButton(text='➤ Send', size_hint=(0.2, 1))
+        send_btn = ModernButton(text='Send', size_hint=(0.2, 1))
         send_btn.bind(on_release=self.send_message)
         self.mic_btn = None
         self.is_recording = False
@@ -429,7 +454,8 @@ class ChatScreen(MDBoxLayout):
         footer_label = MDLabel(
             text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design',
             font_size=20,
-            color=(0.8, 0.9, 1, 1)
+            color=(0.8, 0.9, 1, 1),
+            font_name=get_font_path('NotoSans-Regular')
         )
         footer.add_widget(footer_label)
         self.add_widget(footer)
@@ -550,7 +576,7 @@ class ChatScreen(MDBoxLayout):
                 'Select Mode': 'Select Mode',
                 'Input Type': 'Input Type',
                 'Send': 'Send',
-                '🌐 Language': '🌐 Language',
+                'Language': 'Language',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design',
             },
             'ta': {
@@ -558,7 +584,7 @@ class ChatScreen(MDBoxLayout):
                 'Select Mode': 'முறையை தேர்ந்தெடு',
                 'Input Type': 'இன்புட் வகை',
                 'Send': 'அனுப்பு',
-                '🌐 Language': 'மொழி',
+                'Language': 'மொழி',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 பார்மர் எஐ ஏஜெண்ட் | ஓப்பன் சோர்ஸ் மூலம் இயக்கப்படுகிறது | அணுகக்கூடிய வடிவமைப்பு',
             },
             'hi': {
@@ -566,7 +592,7 @@ class ChatScreen(MDBoxLayout):
                 'Select Mode': 'मोड चुनें',
                 'Input Type': 'इनपुट प्रकार',
                 'Send': 'भेजें',
-                '🌐 Language': 'भाषा',
+                'Language': 'भाषा',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 किसान एआई एजेंट | ओपन सोर्स द्वारा संचालित | सुलभ डिज़ाइन',
             },
             'te': {
@@ -574,7 +600,7 @@ class ChatScreen(MDBoxLayout):
                 'Select Mode': 'మోడ్ ఎంచుకోండి',
                 'Input Type': 'ఇన్పుట్ రకం',
                 'Send': 'పంపు',
-                '🌐 Language': 'భాష',
+                'Language': 'భాష',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 రైతు ఏఐ ఏజెంట్ | ఓపెన్ సోర్స్ ఆధారితం | అందుబాటులో ఉన్న డిజైన్',
             },
             'kn': {
@@ -582,7 +608,7 @@ class ChatScreen(MDBoxLayout):
                 'Select Mode': 'ಮೋಡ್ ಆಯ್ಕೆಮಾಡಿ',
                 'Input Type': 'ಇನ್ಪುಟ್ ಪ್ರಕಾರ',
                 'Send': 'ಕಳುಹಿಸಿ',
-                '🌐 Language': 'ಭಾಷೆ',
+                'Language': 'ಭಾಷೆ',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 ರೈತ ಎಐ ಏಜೆಂಟ್ | ಓಪನ್ ಸೋರ್ಸ್ ಮೂಲಕ ಚಾಲಿತ | ಸುಲಭವಾದ ವಿನ್ಯಾಸ',
             },
             'ml': {
@@ -590,17 +616,34 @@ class ChatScreen(MDBoxLayout):
                 'Select Mode': 'മോഡ് തിരഞ്ഞെടുക്കുക',
                 'Input Type': 'ഇൻപുട്ട് തരം',
                 'Send': 'അയയ്ക്കുക',
-                '🌐 Language': 'ഭാഷ',
+                'Language': 'ഭാഷ',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 കർഷകൻ എഐ ഏജന്റ് | ഓപ്പൺ സോഴ്സ് ഉപയോഗിച്ച് പ്രവർത്തിക്കുന്നു | ആക്സസിബിൾ ഡിസൈൻ',
             },
             # Add more translations as needed
         }
+        font_paths = {
+            "en": get_font_path('NotoSans-Regular'),
+            "ta": get_font_path('NotoSansTamil-Regular'),
+            "hi": get_font_path('NotoSansDevanagari-Regular'),
+        }
+        font_name = font_paths.get(lang_code, font_paths["en"])
         lang_map = translations.get(lang_code, translations['en'])
         self.mode_btn.text = lang_map.get('Select Mode', 'Select Mode')
+        self.mode_btn.font_name = font_name
         self.input_btn.text = lang_map.get('Input Type', 'Input Type')
-        self.input_bar.children[0].text = lang_map.get('Send', 'Send')
-        self.language_btn.text = lang_map.get('🌐 Language', '🌐 Language')
-        self.children[0].children[0].text = lang_map.get('© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design')
+        self.input_btn.font_name = font_name
+        # Send button is the rightmost child in input_bar
+        send_btn = self.input_bar.children[0]
+        send_btn.text = lang_map.get('Send', 'Send')
+        if hasattr(send_btn, 'font_name'):
+            send_btn.font_name = font_name
+        self.language_btn.text = lang_map.get('Language', 'Language')
+        self.language_btn.font_name = font_name
+        # Footer label is the only child of the footer box (which is the first child of self.children)
+        footer_label = self.children[0].children[0]
+        footer_label.text = lang_map.get('© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design')
+        if hasattr(footer_label, 'font_name'):
+            footer_label.font_name = font_name
 
     def advisory_action(self, instance):
         if not get_crop_advice:
