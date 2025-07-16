@@ -203,6 +203,121 @@ def show_debug_popup(error_msg):
     popup.open()
 
 class ChatScreen(MDBoxLayout):
+    def add_bubble(self, text, is_user=False):
+        import re
+        import threading
+        import time
+        lang = self.state.get('language', 'en')
+        orig_text = text
+        spinner_bubble = None
+
+        def format_structured(obj, indent=0):
+            spacer = '  ' * indent
+            if isinstance(obj, dict):
+                lines = []
+                for k, v in obj.items():
+                    if isinstance(v, (dict, list)):
+                        lines.append(f"{spacer}{k}:")
+                        lines.append(format_structured(v, indent + 1))
+                    else:
+                        lines.append(f"{spacer}{k}: {v}")
+                return '\n'.join(lines)
+            elif isinstance(obj, list):
+                return '\n'.join([f"{spacer}• {format_structured(item, indent + 1) if isinstance(item, (dict, list)) else item}" for item in obj])
+            else:
+                return str(obj)
+
+        def remove_escape_sequences(s):
+            if not isinstance(s, str):
+                return s
+            s = s.replace('\\n', '\n').replace('\\t', '    ').replace('\\r', '')
+            s = re.sub(r'\\(?!n|t|r)', '', s)
+            return s
+
+        def show_spinner():
+            nonlocal spinner_bubble
+            spinner_bubble = ChatBubble("Processing...", is_user=False)
+            self.chat_history.add_widget(spinner_bubble)
+            self.chat_history.height = self.chat_history.minimum_height
+            self.scroll.scroll_to(spinner_bubble, padding=10, animate=True)
+
+        def remove_spinner():
+            if spinner_bubble and spinner_bubble.parent:
+                self.chat_history.remove_widget(spinner_bubble)
+                self.chat_history.height = self.chat_history.minimum_height
+
+        def do_translation():
+            import queue
+            translated = orig_text
+            if not is_user and lang != 'en':
+                try:
+                    # Timeout for translation (5 seconds)
+                    result_queue = queue.Queue()
+                    def target():
+                        try:
+                            result_queue.put(self.llm_translate(orig_text, lang, source_lang='en'))
+                        except Exception:
+                            result_queue.put(None)
+                    t = threading.Thread(target=target)
+                    t.start()
+                    t.join(timeout=5)
+                    if t.is_alive():
+                        translated = orig_text  # fallback to English
+                    else:
+                        try:
+                            result = result_queue.get_nowait()
+                            if result is None:
+                                translated = orig_text
+                            else:
+                                translated = result
+                        except Exception:
+                            translated = orig_text
+                except Exception:
+                    translated = orig_text
+            return translated
+
+        try:
+            # If translation may take time, show spinner
+            translation_thread = threading.Thread(target=show_spinner)
+            translation_thread.start()
+            # Do translation (with timeout)
+            translated_text = do_translation()
+            # Remove spinner if shown
+            remove_spinner()
+            formatted_text = translated_text
+            if not is_user:
+                try:
+                    if isinstance(orig_text, str):
+                        stripped = orig_text.strip()
+                        if (stripped.startswith('{') and stripped.endswith('}')) or (stripped.startswith('[') and stripped.endswith(']')):
+                            obj = json.loads(stripped)
+                            formatted_text = format_structured(obj)
+                except Exception:
+                    pass
+            formatted_text = remove_escape_sequences(formatted_text)
+            bubble = ChatBubble(formatted_text, is_user=is_user)
+            self.chat_history.add_widget(bubble)
+            self.chat_history.height = self.chat_history.minimum_height
+            self.scroll.scroll_to(bubble, padding=10, animate=True)
+            prefix = 'USER' if is_user else 'AGENT'
+            logging.info(f"[{prefix}] {orig_text}")
+            if orig_text == 'User history cleared.':
+                try:
+                    with open('kivy_chat_log.txt', 'r', encoding='utf-8') as logf:
+                        lines = logf.readlines()
+                        if lines and 'User history cleared.' in lines[-1]:
+                            last_time = lines[-1].split(' ')[0]
+                            last_dt = datetime.strptime(last_time, '%Y-%m-%d')
+                            if (datetime.now() - last_dt).total_seconds() < 2:
+                                return
+                except Exception:
+                    pass
+        except Exception as e:
+            remove_spinner()
+            logging.error(f"add_bubble error: {str(e)}")
+            self.add_bubble(f"Error displaying message: {str(e)}", is_user=False)
+
+
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
         self.state = {'mode': None, 'input_type': 'text', 'language': 'en', 'context': {}}
@@ -258,9 +373,16 @@ class ChatScreen(MDBoxLayout):
             ("ਪੰਜਾਬੀ", "pa"),
             ("বাংলা", "bn"),
         ]
+        # Use a font that supports all scripts for language names
+        font_path = get_font_path('NotoSans-Regular')
         self.language_dropdown = MDDropdownMenu(
             caller=self.language_btn,
-            items=[{"text": name, "on_release": lambda code=code: self.set_language(code)} for name, code in self.supported_languages]
+            items=[{
+                "text": name,
+                "on_release": (lambda code=code: self.set_language(code)),
+                "viewclass": "MDLabel",
+                "font_name": font_path
+            } for name, code in self.supported_languages]
         )
         self.language_btn.bind(on_release=lambda _: self.language_dropdown.open())
         mode_bar.add_widget(self.language_btn)
