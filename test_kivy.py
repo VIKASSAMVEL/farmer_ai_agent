@@ -679,10 +679,65 @@ class ChatScreen(MDBoxLayout):
             self.add_bubble("Calendar module not available.", is_user=False)
             return
         self.state["mode"] = "calendar_option"
-        self.add_bubble(
-            "Calendar Options:\n1. Show crop calendar\n2. List crops\n3. Add reminder\n4. Add recurring reminder\n5. Delete reminders\n6. Next activity",
-            is_user=False
-        )
+        # Remove any previous calendar option buttons if present
+        for widget in list(self.chat_history.children):
+            if hasattr(widget, 'calendar_option_btn') and widget.calendar_option_btn:
+                self.chat_history.remove_widget(widget)
+        # Calendar options as buttons
+        options = [
+            ("Show crop calendar", lambda *_: self.handle_calendar_option_btn(1)),
+            ("List crops", lambda *_: self.handle_calendar_option_btn(2)),
+            ("Add reminder", lambda *_: self.handle_calendar_option_btn(3)),
+            ("Add recurring reminder", lambda *_: self.handle_calendar_option_btn(4)),
+            ("Delete reminders", lambda *_: self.handle_calendar_option_btn(5)),
+            ("Next activity", lambda *_: self.handle_calendar_option_btn(6)),
+        ]
+        from kivy.uix.boxlayout import BoxLayout
+        btn_box = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+        btn_box.bind(minimum_height=btn_box.setter('height')) # type: ignore
+        font_paths = {
+            "en": get_font_path('NotoSans-Regular'),
+            "ta": get_font_path('NotoSansTamil-Regular'),
+            "hi": get_font_path('NotoSansDevanagari-Regular'),
+        }
+        lang_code = self.state.get('language', 'en')
+        font_name = font_paths.get(lang_code, font_paths["en"])
+        for label, callback in options:
+            btn = MDRaisedButton(
+                text=label,
+                size_hint=(1, None),
+                height=48,
+                md_bg_color=(0.13, 0.16, 0.22, 1),
+                text_color=(0.8, 0.9, 1, 1),
+                font_size=22,
+                font_name=font_name
+            )
+            btn.calendar_option_btn = True
+            btn.bind(on_release=callback)
+            btn_box.add_widget(btn)
+        self.add_bubble("Calendar Options:", is_user=False)
+        self.chat_history.add_widget(btn_box)
+        self.chat_history.height = self.chat_history.minimum_height
+        self.scroll.scroll_to(btn_box, padding=10, animate=True)
+
+    def handle_calendar_option_btn(self, option_num):
+        # Remove calendar option buttons after selection
+        for widget in list(self.chat_history.children):
+            if hasattr(widget, 'calendar_option_btn') and widget.calendar_option_btn:
+                self.chat_history.remove_widget(widget)
+        # Simulate user input for the selected option
+        options_text = {
+            1: "Show crop calendar",
+            2: "List crops",
+            3: "Add reminder",
+            4: "Add recurring reminder",
+            5: "Delete reminders",
+            6: "Next activity",
+        }
+        user_text = options_text.get(option_num, "")
+        if user_text:
+            self.add_bubble(user_text, is_user=True)
+            self.handle_calendar_option(user_text)
 
     def faq_action(self, instance):
         if not FAQ:
@@ -871,28 +926,44 @@ class ChatScreen(MDBoxLayout):
 
     def handle_calendar_option(self, user_text):
         option = user_text.strip()
+        # Accept both number and label for calendar options
+        option_map = {
+            "1": "Show crop calendar",
+            "2": "List crops",
+            "3": "Add reminder",
+            "4": "Add recurring reminder",
+            "5": "Delete reminders",
+            "6": "Next activity",
+        }
+        label_map = {v.lower(): k for k, v in option_map.items()}
+        # Normalize input
+        opt_key = option
+        if option in option_map:
+            opt_key = option
+        elif option.lower() in label_map:
+            opt_key = label_map[option.lower()]
         try:
             if not self.calendar or not self.reminders:
                 self.add_bubble("Calendar module not available.", is_user=False)
                 self.state["mode"] = None
                 return
-            if option == "1":
+            if opt_key == "1":
                 self.add_bubble("Enter crop name:", is_user=False)
                 self.state["mode"] = "calendar_crop"
-            elif option == "2":
+            elif opt_key == "2":
                 crops = self.calendar.list_crops()
                 self.add_bubble("Available crops: " + ", ".join(crops), is_user=False)
                 self.state["mode"] = None
-            elif option == "3":
+            elif opt_key == "3":
                 self.add_bubble("Enter crop name for reminder:", is_user=False)
                 self.state["mode"] = "reminder_crop"
-            elif option == "4":
+            elif opt_key == "4":
                 self.add_bubble("Enter crop name for recurring reminder:", is_user=False)
                 self.state["mode"] = "recurring_crop"
-            elif option == "5":
+            elif opt_key == "5":
                 self.add_bubble("Enter crop name to delete reminders:", is_user=False)
                 self.state["mode"] = "delete_crop"
-            elif option == "6":
+            elif opt_key == "6":
                 self.add_bubble("Enter crop name for next activity:", is_user=False)
                 self.state["mode"] = "next_activity_crop"
             else:

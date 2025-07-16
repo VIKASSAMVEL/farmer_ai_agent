@@ -34,14 +34,14 @@ class CropCalendar:
         return None
     def get_calendar_options(self):
         """
-        Returns the available calendar options for UI button selection.
+        Returns the available calendar options for UI button selection, matching the main UI.
         """
         return [
-            ("View crop schedule", "1"),
+            ("Show crop calendar", "1"),
             ("List crops", "2"),
             ("Add reminder", "3"),
             ("Add recurring reminder", "4"),
-            ("Delete reminder", "5"),
+            ("Delete reminders", "5"),
             ("Next activity", "6")
         ]
     def __init__(self):
@@ -112,12 +112,12 @@ class Reminders:
         self.save_reminders()
     def get_reminder_options(self):
         """
-        Returns the available reminder options for UI button selection (for future extensibility).
+        Returns the available reminder options for UI button selection (for future extensibility), matching the main UI.
         """
         return [
             ("Add reminder", "3"),
             ("Add recurring reminder", "4"),
-            ("Delete reminder", "5")
+            ("Delete reminders", "5")
         ]
     def __init__(self):
         self.reminders = self.load_reminders()
