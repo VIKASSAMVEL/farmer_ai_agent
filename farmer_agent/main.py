@@ -145,12 +145,12 @@ def main():
             location = estimator.get_current_location()
             if location:
                 print(acc.format_text(f"Detected location: {location}"))
-                weekly = estimator.fetch_weekly_forecast(location)
-                if weekly:
-                    print(acc.format_text(f"7-Day Weather Forecast for {location}:"))
-                    print(json.dumps(weekly, indent=2, ensure_ascii=False))
-                    tips = estimator.get_llm_weather_tips(weekly)
-                    print(acc.format_text("\nLLM Tips for Farmers:"))
+                current_weather = estimator.fetch_openweather(location)
+                if current_weather:
+                    print(acc.format_text(f"Current Weather for {location}:"))
+                    print(current_weather)
+                    tips = estimator.get_llm_weather_tips(current_weather)
+                    print(acc.format_text("\nFarming Tips:"))
                     print(tips)
                 else:
                     print(acc.format_text("Could not fetch weekly forecast. Check API key or location."))

@@ -1,4 +1,3 @@
- 
 import os
 import logging
 import traceback
@@ -15,7 +14,6 @@ from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.spinner import MDSpinner
 from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.filemanager import MDFileManager
 from kivy.core.window import Window
 from kivy.uix.spinner import Spinner
 from kivy.clock import Clock
@@ -81,19 +79,20 @@ class ModernInput(MDTextField):
         self.line_color_normal = (0.18, 0.22, 0.28, 1)
         self.fill_color = (0.13, 0.16, 0.22, 1)
         self.hint_text = 'Type your message...'
-        self.font_size = 18  # Assume default scaling for simplicity
-        self.padding = [16, 12, 16, 12]
+        self.font_size = 24  # Increased from 18
+        self.padding = [20, 16, 20, 16]  # Adjusted for larger text
         self.radius = [16]
         self.foreground_color = (1, 1, 1, 1)
         self.cursor_color = (1, 1, 1, 1)
         self.hint_text_color = (0.8, 0.95, 0.8, 1)
+        self.helper_text_font_size = 18  # Increased for hint text
 
 class ModernButton(MDRaisedButton, ButtonBehavior):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.md_bg_color = (33/255, 194/255, 94/255, 1)
         self.text_color = (1, 1, 1, 1)
-        self.font_size = 18
+        self.font_size = 24  # Increased from 18
         self.bold = True
         self.radius = [16]
         with self.canvas.before:
@@ -114,12 +113,12 @@ class ModernButton(MDRaisedButton, ButtonBehavior):
 
 class ChatBubble(MDBoxLayout):
     def __init__(self, text, is_user=False, **kwargs):
-        super().__init__(orientation='horizontal', size_hint_y=None, padding=[16, 8, 16, 8], **kwargs)
+        super().__init__(orientation='horizontal', size_hint_y=None, padding=[20, 20, 20, 20], **kwargs)  # Increased padding
         timestamp = datetime.now().strftime('%H:%M')
         bubble_color = (33/255, 194/255, 94/255, 1) if is_user else (27/255, 38/255, 59/255, 1)
-        avatar_size = 40
+        avatar_size = 48  # Slightly increased to match larger text
         avatar_text = '🧑' if is_user else '🌾'
-        # Use local Segoe UI Emoji.ttf from fonts folder for emoji rendering
+        # Use local Segoe UI Emoji.ttf for emoji rendering
         def get_emoji_font_path():
             base_path = os.path.dirname(os.path.abspath(__file__))
             font_path = os.path.join(base_path, 'fonts', 'Segoe UI Emoji.ttf')
@@ -145,7 +144,9 @@ class ChatBubble(MDBoxLayout):
             theme_text_color='Custom',
             text_color=(1, 1, 1, 1) if is_user else (0.9, 0.9, 0.9, 1),
             font_style='Body2',
-            opacity=0
+            font_size=48,  # Increased from 36
+            opacity=0,
+            line_height=2.2  # Increased from 2.0
         )
         self.label.bind(texture_size=self._update_height)
         self.timestamp_label = MDLabel(
@@ -156,7 +157,8 @@ class ChatBubble(MDBoxLayout):
             theme_text_color='Custom',
             text_color=(0.2, 0.4, 1, 1),
             halign='left' if is_user else 'right',
-            valign='bottom'
+            valign='bottom',
+            font_size=28  # Increased from 22
         )
         if is_user:
             self.add_widget(self.timestamp_label)
@@ -169,18 +171,33 @@ class ChatBubble(MDBoxLayout):
         Animation(opacity=1, d=0.4, t='out_quad').start(self.label)
 
     def _update_height(self, *args):
-        min_height = 48
-        padding = 24
+        min_height = 64  # Increased to accommodate larger text
+        padding = 32  # Increased padding
         self.label.height = max(self.label.texture_size[1] + padding, min_height)
-        self.height = self.label.height + 12
+        self.height = self.label.height + 16
 
 def show_debug_popup(error_msg):
     content = MDBoxLayout(orientation='vertical')
-    label = MDLabel(text=error_msg, size_hint_y=None, height=400, font_name='DejaVuSans')
-    btn = MDRectangleFlatButton(text='Close', size_hint_y=None, height=40)
+    label = MDLabel(
+        text=error_msg,
+        size_hint_y=None,
+        height=400,
+        font_name=get_font_path('NotoSans-Regular'),
+        font_size=24  # Increased for readability
+    )
+    btn = MDRectangleFlatButton(
+        text='Close',
+        size_hint_y=None,
+        height=48,
+        font_size=24  # Increased
+    )
     content.add_widget(label)
     content.add_widget(btn)
-    popup = MDDialog(title='Debugger - Error Traceback', content=content, size_hint=(0.9, 0.7))
+    popup = MDDialog(
+        title='Debugger - Error Traceback',
+        content=content,
+        size_hint=(0.9, 0.7)
+    )
     btn.bind(on_release=popup.dismiss)
     popup.open()
 
@@ -190,20 +207,26 @@ class ChatScreen(MDBoxLayout):
         self.state = {'mode': None, 'input_type': 'text', 'language': 'en', 'context': {}}
         self.calendar = CropCalendar() if CropCalendar else None
         self.reminders = Reminders() if Reminders else None
+        self.voice_output_enabled = False
         self.bind(pos=self._update_bg, size=self._update_bg)
 
         # Mode bar
         mode_bar = MDBoxLayout(size_hint=(1, 0.09), padding=[16, 8, 16, 8], spacing=16)
-        self.mode_btn = MDRaisedButton(text="Select Mode", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=18)
+        self.mode_btn = MDRaisedButton(
+            text="Select Mode",
+            size_hint=(None, 1),
+            width=140,
+            md_bg_color=(0.13, 0.16, 0.22, 1),
+            text_color=(0.8, 0.9, 1, 1),
+            font_size=24  # Increased from 18
+        )
         self.mode_menu = MDDropdownMenu(
             caller=self.mode_btn,
             items=[
-                {"text": "Input", "on_release": lambda: self.input_action(None)},
                 {"text": "Advisory", "on_release": lambda: self.advisory_action(None)},
                 {"text": "Calendar", "on_release": lambda: self.calendar_action(None)},
                 {"text": "FAQ", "on_release": lambda: self.faq_action(None)},
                 {"text": "Weather", "on_release": lambda: self.weather_action(None)},
-                {"text": "Translate", "on_release": lambda: self.translate_action(None)},
                 {"text": "Analytics", "on_release": lambda: self.analytics_action(None)},
                 {"text": "TTS Voices", "on_release": lambda: self.tts_voices_action(None)},
                 {"text": "Clear History", "on_release": lambda: self.clear_history_action(None)},
@@ -212,7 +235,14 @@ class ChatScreen(MDBoxLayout):
         )
         self.mode_btn.bind(on_release=lambda _: self.mode_menu.open())
         mode_bar.add_widget(self.mode_btn)
-        self.language_btn = MDRaisedButton(text="🌐 Language", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=18)
+        self.language_btn = MDRaisedButton(
+            text="🌐 Language",
+            size_hint=(None, 1),
+            width=140,
+            md_bg_color=(0.13, 0.16, 0.22, 1),
+            text_color=(0.8, 0.9, 1, 1),
+            font_size=24  # Increased from 18
+        )
         self.language_dropdown = MDDropdownMenu(
             caller=self.language_btn,
             items=[
@@ -245,7 +275,14 @@ class ChatScreen(MDBoxLayout):
 
         # Input bar
         self.input_bar = MDBoxLayout(size_hint=(1, 0.12), padding=[16, 8, 16, 8], spacing=16)
-        self.input_btn = MDRaisedButton(text="📝 Input Type", size_hint=(None, 1), width=140, md_bg_color=(0.13, 0.16, 0.22, 1), text_color=(0.8, 0.9, 1, 1), font_size=18)
+        self.input_btn = MDRaisedButton(
+            text="📝 Input Type",
+            size_hint=(None, 1),
+            width=140,
+            md_bg_color=(0.13, 0.16, 0.22, 1),
+            text_color=(0.8, 0.9, 1, 1),
+            font_size=24  # Increased from 18
+        )
         self.input_menu = MDDropdownMenu(
             caller=self.input_btn,
             items=[{"text": opt[0], "on_release": opt[1]} for opt in self.input_options]
@@ -263,7 +300,11 @@ class ChatScreen(MDBoxLayout):
 
         # Footer
         footer = MDBoxLayout(size_hint=(1, 0.05), padding=[0, 4, 0, 4])
-        footer_label = MDLabel(text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', font_size=14, color=(0.8, 0.9, 1, 1))
+        footer_label = MDLabel(
+            text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design',
+            font_size=20,  # Increased from 14
+            color=(0.8, 0.9, 1, 1)
+        )
         footer.add_widget(footer_label)
         self.add_widget(footer)
 
@@ -297,17 +338,32 @@ class ChatScreen(MDBoxLayout):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
 
     def add_bubble(self, text, is_user=False):
+        def format_structured(obj, indent=0):
+            spacer = '  ' * indent
+            if isinstance(obj, dict):
+                lines = []
+                for k, v in obj.items():
+                    if isinstance(v, (dict, list)):
+                        lines.append(f"{spacer}{k}:")
+                        lines.append(format_structured(v, indent + 1))
+                    else:
+                        lines.append(f"{spacer}{k}: {v}")
+                return '\n'.join(lines)
+            elif isinstance(obj, list):
+                return '\n'.join([f"{spacer}• {format_structured(item, indent + 1) if isinstance(item, (dict, list)) else item}" for item in obj])
+            else:
+                return str(obj)
+
         try:
             formatted_text = text
             if not is_user:
                 try:
-                    if isinstance(text, str) and text.strip().startswith('{') and text.strip().endswith('}'):
-                        obj = json.loads(text)
-                        formatted_text = json.dumps(obj, indent=2, ensure_ascii=False)
-                    elif isinstance(text, str) and text.strip().startswith('[') and text.strip().endswith(']'):
-                        obj = json.loads(text)
-                        if isinstance(obj, list):
-                            formatted_text = "\n".join([f"• {item}" for item in obj])
+                    # Try to parse JSON and format it nicely
+                    if isinstance(text, str):
+                        stripped = text.strip()
+                        if (stripped.startswith('{') and stripped.endswith('}')) or (stripped.startswith('[') and stripped.endswith(']')):
+                            obj = json.loads(stripped)
+                            formatted_text = format_structured(obj)
                 except Exception:
                     pass
             bubble = ChatBubble(formatted_text, is_user=is_user)
@@ -384,7 +440,14 @@ class ChatScreen(MDBoxLayout):
         self.input_menu.dismiss()
         self.text_input.disabled = True
         if not self.mic_btn:
-            self.mic_btn = MDRectangleFlatButton(text="🎤 Mic", size_hint=(None, None), size=(120, 44), md_bg_color=(0.2, 0.6, 0.2, 1), text_color=(1, 1, 1, 1))
+            self.mic_btn = MDRectangleFlatButton(
+                text="🎤 Mic",
+                size_hint=(None, None),
+                size=(120, 48),
+                md_bg_color=(0.2, 0.6, 0.2, 1),
+                text_color=(1, 1, 1, 1),
+                font_size=24  # Increased
+            )
             self.mic_btn.bind(on_release=self.start_mic_recording)
             self.input_bar.add_widget(self.mic_btn)
         self.add_bubble("Click the Mic button to start/stop recording.", is_user=False)
@@ -415,14 +478,40 @@ class ChatScreen(MDBoxLayout):
             },
         }
         lang_map = translations.get(lang_code, translations['en'])
-        # Update UI elements
         self.mode_btn.text = lang_map['Select Mode']
         self.input_btn.text = lang_map['Input Type']
         self.input_bar.children[0].text = lang_map['Send']
         self.language_btn.text = lang_map['🌐 Language']
         self.children[0].children[0].text = lang_map['© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design']
 
-    # Duplicate weather_action removed. The correct implementation remains below.
+    def advisory_action(self, instance):
+        if not get_crop_advice:
+            self.add_bubble("Advisory module not available.", is_user=False)
+            return
+        crop_list = ["Tomato", "Rice", "Wheat", "Maize", "Potato", "Onion", "Cotton", "Sugarcane"]
+        self.state["mode"] = "advisory"
+        self.state["context"]["crop_list"] = crop_list
+        self.add_bubble("Select your crop for advisory:", is_user=False)
+        crop_spinner = Spinner(
+            text="Select Crop",
+            values=crop_list,
+            size_hint=(None, None),
+            size=(200, 48),
+            pos_hint={'center_x': 0.5},
+            font_size=24  # Increased
+        )
+        def on_crop_select(spinner, text):
+            self.text_input.text = text
+            self.state["mode"] = "advisory_crop"
+            self.chat_history.remove_widget(crop_spinner)
+            self.send_message(None)
+        if hasattr(crop_spinner, 'bind'):
+            crop_spinner.bind(text=on_crop_select) # type: ignore
+        self.chat_history.add_widget(crop_spinner)
+
+    def input_action(self, instance):
+        self.state["mode"] = "input"
+        self.add_bubble("Input Options:\n1. Voice\n2. Audio File\n3. Text\n4. Image", is_user=False)
 
     def calendar_action(self, instance):
         if not CropCalendar or not Reminders:
@@ -441,11 +530,15 @@ class ChatScreen(MDBoxLayout):
         self.state["mode"] = "faq"
         self.add_bubble("Enter your question:", is_user=False)
 
+    def toggle_voice_output(self):
+        self.voice_output_enabled = not self.voice_output_enabled
+        status = "enabled" if self.voice_output_enabled else "disabled"
+        self.add_bubble(f"Voice output {status}.", is_user=False)
+
     def weather_action(self, instance):
         if not WeatherEstimator:
             self.add_bubble("Weather module not available.", is_user=False)
             return
-        # Show current weather for detected location
         spinner = MDSpinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
         self.chat_history.add_widget(spinner)
         self.text_input.disabled = True
@@ -770,7 +863,7 @@ class ChatScreen(MDBoxLayout):
                             answer = results[0].get('answer', '')
                             result_bubbles.append(("LLM FAQ Response:", False))
                             result_bubbles.append((answer, False))
-                            if speak:
+                            if speak and self.voice_output_enabled:
                                 speak(answer)
                         else:
                             result_bubbles.append(("No response from LLM.", False))
@@ -852,16 +945,6 @@ class ChatScreen(MDBoxLayout):
                         Clock.schedule_once(lambda dt: self._update_ui(spinner, result_bubbles), 0)
                 threading.Thread(target=run_audio, daemon=True).start()
                 self.state["mode"] = None
-            elif self.state.get("mode") == "text_input":
-                text = user_text.strip()
-                self.add_bubble(f"Text: {text}", is_user=False)
-                if speak:
-                    try:
-                        speak(text)
-                    except Exception as e:
-                        logging.error(f"Text-to-speech error: {str(e)}")
-                        self.add_bubble(f"Error in text-to-speech: {str(e)}", is_user=False)
-                self.state["mode"] = None
             else:
                 self.add_bubble("Sorry, I didn't understand. Try using a feature button.", is_user=False)
         except Exception as e:
@@ -875,4 +958,3 @@ class FarmerAgentApp(MDApp):
 
 if __name__ == "__main__":
     FarmerAgentApp().run()
- 

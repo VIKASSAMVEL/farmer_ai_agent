@@ -54,7 +54,7 @@ class WeatherEstimator:
             return None
 
     def fetch_openweather(self, location):
-        """Fetch current weather data from OpenWeatherMap."""
+        """Fetch current weather data from OpenWeatherMap and format output cleanly."""
         if not self.openweather_api_key or not location:
             return None
         try:
@@ -66,21 +66,23 @@ class WeatherEstimator:
             wind = data.get('wind', {})
             rain = data.get('rain', {})
             weather_desc = data.get('weather', [{}])[0].get('description', '')
-            return {
-                "temperature": main.get('temp', None),
-                "humidity": main.get('humidity', None),
-                "rainfall": rain.get('1h', 0),
-                "wind": f"{wind.get('speed', 'N/A')} m/s {wind.get('deg', '')}",
-                "advice": f"{weather_desc.capitalize()}. Monitor local weather conditions.",
-                "warnings": []
-            }
+            # Format output as clean text
+            output = (
+                f"Temperature: {main.get('temp', 'N/A')}°C\n"
+                f"Humidity: {main.get('humidity', 'N/A')}%\n"
+                f"Rainfall (last 1h): {rain.get('1h', 0)} mm\n"
+                f"Wind: {wind.get('speed', 'N/A')} m/s {wind.get('deg', '')}\n"
+                f"Condition: {weather_desc.capitalize()}\n"
+                f"Advice: Monitor local weather conditions."
+            )
+            return output
         except Exception as e:
             print(f"OpenWeatherMap error: {e}")
             return None
 
 
     def get_llm_weather_tips(self, weather_data, crop=None, model="llama3:8b", host="http://localhost:11434"):
-        """Generate farming tips using local Llama3:8b model based on weather data."""
+        """Generate farming tips using local Llama3:8b model based on weather data. Output clean text only."""
         if not weather_data:
             return "No weather data available for tips."
         try:
@@ -92,17 +94,27 @@ class WeatherEstimator:
             )
             if crop:
                 prompt += f"\nCrop: {crop}"
-            prompt += f"\nWeather Data: {json.dumps(weather_data, ensure_ascii=False, indent=2)}\nTips:"
-            
+            # Use plain text for weather data
+            if isinstance(weather_data, str):
+                weather_info = weather_data
+            elif isinstance(weather_data, dict):
+                weather_info = '\n'.join([f"{k.capitalize()}: {v}" for k, v in weather_data.items() if k != 'warnings'])
+            else:
+                weather_info = str(weather_data)
+            prompt += f"\nWeather Data: {weather_info}\nTips:"
             # Call local Llama3:8b via Ollama
             url = f"{host}/api/generate"
             payload = {"model": model, "prompt": prompt, "stream": False}
             response = requests.post(url, json=payload, timeout=60)
             response.raise_for_status()
             llm_response = response.json().get("response", "").strip()
-            return llm_response or "No tips generated."
+            # Remove asterisks, quotes, and extra symbols from LLM output
+            import re
+            clean_response = re.sub(r'["\*\[\]\{\}]', '', llm_response)
+            clean_response = re.sub(r'\s*\n\s*', '\n', clean_response)
+            return clean_response or "No tips generated."
         except Exception as e:
-            return f"[LLM error: {e}]"
+            return f"LLM error: {e}"
 
     def estimate(self, season=None, location=None, crop=None, date=None, use_online=True):
         """Estimate weather for a given season, location, crop, or date."""
@@ -110,15 +122,29 @@ class WeatherEstimator:
         if use_online and self.openweather_api_key and location:
             forecast = self.fetch_openweather(location)
             if forecast:
-                pattern = forecast.copy()
-                if crop:
-                    if crop.lower() in ["rice", "paddy"]:
-                        pattern["advice"] += " Rice grows well in wet conditions, but ensure proper drainage."
-                    elif crop.lower() in ["wheat"]:
-                        pattern["advice"] += " Wheat is sensitive to frost; cover seedlings if needed."
-                    elif crop.lower() in ["tomato"]:
-                        pattern["advice"] += " Provide shade to tomato plants during peak heat."
-                return pattern
+                # If forecast is a dict, copy and add crop advice; if string, just append advice
+                if isinstance(forecast, dict):
+                    pattern = forecast.copy()
+                    if crop:
+                        if crop.lower() in ["rice", "paddy"]:
+                            pattern["advice"] += " Rice grows well in wet conditions, but ensure proper drainage."
+                        elif crop.lower() in ["wheat"]:
+                            pattern["advice"] += " Wheat is sensitive to frost; cover seedlings if needed."
+                        elif crop.lower() in ["tomato"]:
+                            pattern["advice"] += " Provide shade to tomato plants during peak heat."
+                    return pattern
+                elif isinstance(forecast, str):
+                    advice = ""
+                    if crop:
+                        if crop.lower() in ["rice", "paddy"]:
+                            advice = " Rice grows well in wet conditions, but ensure proper drainage."
+                        elif crop.lower() in ["wheat"]:
+                            advice = " Wheat is sensitive to frost; cover seedlings if needed."
+                        elif crop.lower() in ["tomato"]:
+                            advice = " Provide shade to tomato plants during peak heat."
+                    return forecast + ("\n" + advice if advice else "")
+                else:
+                    return forecast
 
         # Fallback to offline patterns
         if not season:

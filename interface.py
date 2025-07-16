@@ -391,7 +391,7 @@ class ChatScreen(BoxLayout):
                 location = estimator.get_current_location()
                 if location:
                     result_bubbles.append((f"Detected location: {location}", False))
-                    weekly = estimator.fetch_weekly_forecast(location)
+                    weekly = estimator.fetch_openweather(location)
                     if weekly:
                         import json
                         result_bubbles.append((f"7-Day Weather Forecast for {location}:", False))
@@ -909,12 +909,12 @@ if __name__ == "__main__":
                         use_online=True
                     )
                     self.add_bubble("Weather Estimation:", is_user=False)
-                    self.add_bubble(f"Temperature: {weather.get('temperature', 'N/A')}°C", is_user=False)
-                    self.add_bubble(f"Humidity: {weather.get('humidity', 'N/A')}%", is_user=False)
-                    self.add_bubble(f"Rainfall: {weather.get('rainfall', 'N/A')} mm", is_user=False)
-                    self.add_bubble(f"Wind: {weather.get('wind', 'N/A')}", is_user=False)
-                    self.add_bubble(f"Advice: {weather.get('advice', 'N/A')}", is_user=False)
-                    warnings = weather.get('warnings', [])
+                    self.add_bubble(f"Temperature: {weather.get('temperature', 'N/A')}°C", is_user=False) # type: ignore
+                    self.add_bubble(f"Humidity: {weather.get('humidity', 'N/A')}%", is_user=False) # type: ignore
+                    self.add_bubble(f"Rainfall: {weather.get('rainfall', 'N/A')} mm", is_user=False) # type: ignore
+                    self.add_bubble(f"Wind: {weather.get('wind', 'N/A')}", is_user=False) # type: ignore
+                    self.add_bubble(f"Advice: {weather.get('advice', 'N/A')}", is_user=False) # type: ignore
+                    warnings = weather.get('warnings', []) # type: ignore
                     if warnings:
                         self.add_bubble("Warnings:", is_user=False)
                         for w in warnings:
