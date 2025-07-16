@@ -337,6 +337,7 @@ class ChatScreen(MDBoxLayout):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
 
     def add_bubble(self, text, is_user=False):
+        import re
         def format_structured(obj, indent=0):
             spacer = '  ' * indent
             if isinstance(obj, dict):
@@ -353,6 +354,14 @@ class ChatScreen(MDBoxLayout):
             else:
                 return str(obj)
 
+        def remove_escape_sequences(s):
+            if not isinstance(s, str):
+                return s
+            # Remove escape sequences like \n, \t, \r, etc. but keep actual newlines
+            s = s.replace('\\n', '\n').replace('\\t', '    ').replace('\\r', '')
+            # Remove any remaining backslash-escaped characters except for \\n+            s = re.sub(r'\\(?!n|t|r)', '', s)
+            return s
+
         try:
             formatted_text = text
             if not is_user:
@@ -365,6 +374,8 @@ class ChatScreen(MDBoxLayout):
                             formatted_text = format_structured(obj)
                 except Exception:
                     pass
+            # Remove escape characters from the final text
+            formatted_text = remove_escape_sequences(formatted_text)
             bubble = ChatBubble(formatted_text, is_user=is_user)
             self.chat_history.add_widget(bubble)
             self.chat_history.height = self.chat_history.minimum_height

@@ -81,8 +81,8 @@ class WeatherEstimator:
             return None
 
 
-    def get_llm_weather_tips(self, weather_data, crop=None, model="llama3:8b", host="http://localhost:11434"):
-        """Generate farming tips using local Llama3:8b model based on weather data. Output clean text only."""
+    def get_llm_weather_tips(self, weather_data, crop=None, model="phi3:mini", host="http://localhost:11434"):
+        """Generate farming tips using local phi3:mini model based on weather data. Output clean text only."""
         if not weather_data:
             return "No weather data available for tips."
         try:
@@ -102,7 +102,7 @@ class WeatherEstimator:
             else:
                 weather_info = str(weather_data)
             prompt += f"\nWeather Data: {weather_info}\nTips:"
-            # Call local Llama3:8b via Ollama
+            # Call local phi3:mini via Ollama
             url = f"{host}/api/generate"
             payload = {"model": model, "prompt": prompt, "stream": False}
             response = requests.post(url, json=payload, timeout=60)

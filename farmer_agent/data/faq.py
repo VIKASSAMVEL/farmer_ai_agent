@@ -16,7 +16,7 @@ class FAQ:
         with open(FAQ_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
 
-    def search(self, query, tags=None, fuzzy=False, use_llm=True, model="llama3:8b", host="http://localhost:11434"):
+    def search(self, query, tags=None, fuzzy=False, use_llm=True, model="phi3:mini", host="http://localhost:11434"):
         """
         Search FAQ using local LLM (Ollama) if available, otherwise fallback to static FAQ search.
         :param query: search string

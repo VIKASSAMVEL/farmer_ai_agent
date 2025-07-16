@@ -84,7 +84,7 @@ Follow these steps to set up and run the Farmer AI Agent on your local machine.
 *   Git
 *   (Optional but Recommended) Ollama for running a local LLM. After installing, pull a model:
     ```sh
-    ollama pull llama3:8b
+    ollama pull phi3:mini
     ```
 
 ### 2. Clone the Repository

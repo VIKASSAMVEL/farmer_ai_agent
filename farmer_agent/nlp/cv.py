@@ -4,7 +4,7 @@
 from inference_sdk import InferenceHTTPClient
 
 class PlantIdentifier:
-    def get_llm_disease_tips(self, disease_summary, model="llama3:8b", host="http://localhost:11434"):
+    def get_llm_disease_tips(self, disease_summary, model="phi3:mini", host="http://localhost:11434"):
         """
         Use local LLM (Ollama) to provide tips, solutions, and medicine recommendations based on detected disease(s).
         disease_summary: string output from identify()
