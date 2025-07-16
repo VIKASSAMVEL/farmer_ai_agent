@@ -3,7 +3,6 @@ import logging
 import traceback
 import json
 import threading
-import time
 import queue
 import re
 from datetime import datetime
@@ -42,7 +41,7 @@ def get_font_path(font_name):
     if os.path.exists(font_path):
         return font_path
     logging.warning(f"Font file {font_path} not found, falling back to default font.")
-    return 'Roboto'  # Fallback to KivyMD's default font
+    return 'Roboto'
 
 # Backend imports with error handling
 try:
@@ -50,18 +49,17 @@ try:
     from farmer_agent.data.faq import FAQ
     from farmer_agent.data.weather import WeatherEstimator
     from farmer_agent.data.crop_calendar import CropCalendar, Reminders
-    from farmer_agent.nlp.stt import recognize_speech, STT
-    from farmer_agent.nlp.tts import speak, list_voices
+    from farmer_agent.nlp.stt import STT
+    from farmer_agent.nlp.tts import speak
     from farmer_agent.nlp.translate import OfflineTranslator
     from farmer_agent.nlp.cv import PlantIdentifier
-    from farmer_agent.utils.file_utils import load_json
     from farmer_agent.data.user_profile import UserManager
     from farmer_agent.data.analytics import Analytics
     from farmer_agent.utils.env_loader import load_env_local
     from farmer_agent.utils.llm_utils import call_llm
 except ImportError as e:
     logging.error(f"Backend import error: {str(e)}")
-    get_crop_advice = FAQ = WeatherEstimator = CropCalendar = Reminders = recognize_speech = STT = speak = list_voices = OfflineTranslator = PlantIdentifier = load_json = UserManager = Analytics = load_env_local = call_llm = None
+    get_crop_advice = FAQ = WeatherEstimator = CropCalendar = Reminders = STT = speak = OfflineTranslator = PlantIdentifier = UserManager = Analytics = load_env_local = call_llm = None
 
 # Define custom widgets
 class Divider(MDBoxLayout):
@@ -113,9 +111,6 @@ class ModernButton(MDRaisedButton, ButtonBehavior):
         result = super().on_touch_down(touch)
         return bool(result)
 
-    def on_touch_move(self, touch, *args):
-        return super().on_touch_move(touch, *args)
-
 class ChatBubble(MDBoxLayout):
     def __init__(self, text, is_user=False, **kwargs):
         super().__init__(orientation='horizontal', size_hint_y=None, padding=[20, 20, 20, 20], **kwargs)
@@ -127,9 +122,7 @@ class ChatBubble(MDBoxLayout):
         def get_emoji_font_path():
             base_path = os.path.dirname(os.path.abspath(__file__))
             font_path = os.path.join(base_path, 'fonts', 'Segoe UI Emoji.ttf')
-            if os.path.exists(font_path):
-                return font_path
-            return 'Segoe UI Emoji'
+            return font_path if os.path.exists(font_path) else 'Segoe UI Emoji'
 
         avatar = MDLabel(
             text=avatar_text,
@@ -221,10 +214,7 @@ class ChatScreen(MDBoxLayout):
         self.font_paths = {
             "en": get_font_path('NotoSans-Regular'),
             "ta": get_font_path('NotoSansTamil-Regular'),
-            "hi": get_font_path('NotoSansDevanagari-Regular'),
-            "te": get_font_path('NotoSansTelugu-Regular'),
-            "kn": get_font_path('NotoSansKannada-Regular'),
-            "ml": get_font_path('NotoSansMalayalam-Regular')
+            "hi": get_font_path('NotoSansDevanagari-Regular')
         }
 
         # Mode bar
@@ -269,10 +259,7 @@ class ChatScreen(MDBoxLayout):
         self.supported_languages = [
             ("English", "en"),
             ("தமிழ்", "ta"),
-            ("हिन्दी", "hi"),
-            ("తెలుగు", "te"),
-            ("ಕನ್ನಡ", "kn"),
-            ("മലയാളം", "ml")
+            ("हिन्दी", "hi")
         ]
         self.language_dropdown = MDDropdownMenu(
             caller=self.language_btn,
@@ -631,6 +618,80 @@ class ChatScreen(MDBoxLayout):
             self.input_bar.add_widget(self.mic_btn)
         self.add_bubble("Click the Mic button to start/stop recording.", is_user=False)
 
+    def start_mic_recording(self, instance):
+        try:
+            if not STT:
+                self.add_bubble("Voice input not available.", is_user=False)
+                logging.error("[STT-UI] STT class is None")
+                return
+            if not hasattr(self, '_stt_instance'):
+                self._stt_instance = STT()
+            stt = self._stt_instance
+            if not hasattr(self, '_mic_recording'):
+                self._mic_recording = False
+            lang_code = self.state.get('language', 'en') or 'en'
+            if not self._mic_recording:
+                self._mic_recording = True
+                if self.mic_btn:
+                    self.mic_btn.text = "⏹ Stop Mic"
+                self.add_bubble("Recording... Please speak into the mic. Click again to stop.", is_user=False)
+                logging.info("[STT-UI] Mic recording started")
+                def run_record():
+                    try:
+                        stt.record_from_mic()
+                        logging.info(f"[STT-UI] record_from_mic() called (lang_code for transcription will be {lang_code})")
+                    except Exception as e:
+                        logging.error(f"[STT-UI] Exception in record_from_mic: {str(e)}\n{traceback.format_exc()}")
+                        def set_error(dt):
+                            self.add_bubble(f"Mic error: {str(e)}", is_user=False)
+                            self._mic_recording = False
+                            if self.mic_btn:
+                                self.mic_btn.text = "🎤 Mic"
+                        Clock.schedule_once(set_error, 0)
+                self._mic_thread = threading.Thread(target=run_record, daemon=True)
+                self._mic_thread.start()
+            else:
+                self._mic_recording = False
+                if self.mic_btn:
+                    self.mic_btn.text = "🎤 Mic"
+                self.add_bubble("Transcribing...", is_user=False)
+                def run_transcribe():
+                    try:
+                        audio_path = stt.stop_recording_from_mic()
+                        logging.info(f"[STT-UI] stop_recording_from_mic() returned: {audio_path}")
+                        if isinstance(audio_path, str) and audio_path.startswith('[Error'):
+                            result = audio_path
+                        else:
+                            result = stt.transcribe_audio(audio_path, language=lang_code)
+                        logging.info(f"[STT-UI] transcribe_audio() returned: {result}")
+                        def set_text(dt):
+                            if result and not str(result).startswith('[Error') and result.strip() and result.strip() != '[Mic Recording Started]':
+                                self.text_input.text = result
+                                self.add_bubble(f"Speech-to-text result: {result}", is_user=True)
+                                self.send_message(None)
+                            else:
+                                self.add_bubble(f"No speech detected or error: {result}", is_user=False)
+                            self._mic_recording = False
+                            if self.mic_btn:
+                                self.mic_btn.text = "🎤 Mic"
+                        Clock.schedule_once(set_text, 0)
+                    except Exception as e:
+                        logging.error(f"[STT-UI] Exception in run_transcribe: {str(e)}\n{traceback.format_exc()}")
+                        def set_error(dt):
+                            self.add_bubble(f"Mic error: {str(e)}", is_user=False)
+                            self._mic_recording = False
+                            if self.mic_btn:
+                                self.mic_btn.text = "🎤 Mic"
+                        Clock.schedule_once(set_error, 0)
+                self._mic_thread = threading.Thread(target=run_transcribe, daemon=True)
+                self._mic_thread.start()
+        except Exception as e:
+            logging.error(f"[STT-UI] Outer exception: {str(e)}\n{traceback.format_exc()}")
+            self.add_bubble(f"Mic error: {str(e)}", is_user=False)
+            self._mic_recording = False
+            if self.mic_btn:
+                self.mic_btn.text = "🎤 Mic"
+
     def set_language(self, lang_code):
         self.language_dropdown.dismiss()
         self.state['language'] = lang_code
@@ -668,30 +729,6 @@ class ChatScreen(MDBoxLayout):
                 'Send': 'भेजें',
                 'Language': 'भाषा',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 किसान एआई एजेंट | ओपन सोर्स द्वारा संचालित | सुलभ डिज़ाइन',
-            },
-            'te': {
-                'Farmer AI Agent': 'రైతు ఏఐ ఏజెంట్',
-                'Select Mode': 'మోడ్ ఎంచుకోండి',
-                'Input Type': 'ఇన్పుట్ రకం',
-                'Send': 'పంపు',
-                'Language': 'భాష',
-                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 రైతు ఏఐ ఏజెంట్ | ఓపెన్ సోర్స్ ఆధారితం | అందుబాటులో ఉన్న డిజైన్',
-            },
-            'kn': {
-                'Farmer AI Agent': 'ರೈತ ಎಐ ಏಜೆಂಟ್',
-                'Select Mode': 'ಮೋಡ್ ಆಯ್ಕೆಮಾಡಿ',
-                'Input Type': 'ಇನ್ಪುಟ್ ಪ್ರಕಾರ',
-                'Send': 'ಕಳುಹಿಸಿ',
-                'Language': 'ಭಾಷೆ',
-                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 ರೈತ ಎಐ ಏಜೆಂಟ್ | ಓಪನ್ ಸೋರ್ಸ್ ಮೂಲಕ ಚಾಲಿತ | ಸುಲಭವಾದ ವಿನ್ಯಾಸ',
-            },
-            'ml': {
-                'Farmer AI Agent': 'കർഷകൻ എഐ ഏജന്റ്',
-                'Select Mode': 'മോഡ് തിരഞ്ഞെടുക്കുക',
-                'Input Type': 'ഇൻപുട്ട് തരം',
-                'Send': 'അയയ്ക്കുക',
-                'Language': 'ഭാഷ',
-                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 കർഷകൻ എഐ ഏജന്റ് | ഓപ്പൺ സോഴ്സ് ഉപയോഗിച്ച് പ്രവർത്തിക്കുന്നു | ആക്സസിബിൾ ഡിസൈൻ',
             }
         }
         lang_map = translations.get(lang_code, translations['en'])
@@ -881,68 +918,6 @@ class ChatScreen(MDBoxLayout):
         self.text_input.disabled = False
         for text, is_user in result_bubbles:
             self.add_bubble(text, is_user=is_user)
-
-    def start_mic_recording(self, instance):
-        try:
-            if not recognize_speech:
-                self.add_bubble("Voice input not available.", is_user=False)
-                return
-            if not hasattr(self, '_mic_stop_event'):
-                self._mic_stop_event = threading.Event()
-                self._mic_thread = None
-            if not self.is_recording:
-                self.is_recording = True
-                self._mic_stop_event.clear()
-                if self.mic_btn:
-                    self.mic_btn.text = "⏹ Stop Mic"
-                self.add_bubble("Recording... Please speak into the mic. Click again to stop.", is_user=False)
-                def run_stt():
-                    try:
-                        text_result = [""]  # List for mutable reference
-                        def record():
-                            lang_code = self.state.get('language', 'en') or 'en'
-                            if lang_code == 'auto':
-                                lang_code = 'en'
-                            try:
-                                text_result[0] = recognize_speech(source='mic', lang=lang_code) # type: ignore
-                            except Exception as e:
-                                text_result[0] = f"[Error] {str(e)}"
-                        rec_thread = threading.Thread(target=record)
-                        rec_thread.start()
-                        self._mic_stop_event.wait()
-                        rec_thread.join(timeout=2)
-                        text = text_result[0]
-                        def set_text(dt):
-                            if text and not str(text).startswith('[Error') and text.strip() and text.strip() != '[Mic Recording Started]':
-                                self.add_bubble(f"Mic Input: {text}", is_user=True)
-                                self.text_input.text = text
-                                self.send_message(None)
-                            else:
-                                self.add_bubble("No speech detected. Please try again or check your microphone.", is_user=False)
-                            self.is_recording = False
-                            if self.mic_btn:
-                                self.mic_btn.text = "🎤 Mic"
-                        Clock.schedule_once(set_text, 0)
-                    except Exception as e:
-                        def set_error(dt):
-                            self.add_bubble(f"Mic error: {str(e)}", is_user=False)
-                            self.is_recording = False
-                            if self.mic_btn:
-                                self.mic_btn.text = "🎤 Mic"
-                        Clock.schedule_once(set_error, 0)
-                self._mic_thread = threading.Thread(target=run_stt, daemon=True)
-                self._mic_thread.start()
-            else:
-                self.is_recording = False
-                if hasattr(self, '_mic_stop_event'):
-                    self._mic_stop_event.set()
-                if self.mic_btn:
-                    self.mic_btn.text = "🎤 Mic"
-        except Exception as e:
-            self.add_bubble(f"Mic error: {str(e)}", is_user=False)
-            self.is_recording = False
-            if self.mic_btn:
-                self.mic_btn.text = "🎤 Mic"
 
     def handle_calendar_option(self, user_text):
         option_map = {
@@ -1234,7 +1209,7 @@ class ChatScreen(MDBoxLayout):
                     result_bubbles = []
                     try:
                         if call_llm:
-                            response = call_llm(user_text) # type: ignore
+                            response = call_llm(user_text)
                             result_bubbles.append((response, False))
                             if speak and self.voice_output_enabled:
                                 speak(response)
