@@ -228,7 +228,6 @@ class ChatScreen(MDBoxLayout):
                 {"text": "FAQ", "on_release": lambda: self.faq_action(None)},
                 {"text": "Weather", "on_release": lambda: self.weather_action(None)},
                 {"text": "Analytics", "on_release": lambda: self.analytics_action(None)},
-                {"text": "TTS Voices", "on_release": lambda: self.tts_voices_action(None)},
                 {"text": "Clear History", "on_release": lambda: self.clear_history_action(None)},
                 {"text": "Exit", "on_release": lambda: self.exit_action(None)},
             ]
