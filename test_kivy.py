@@ -835,6 +835,10 @@ class ChatScreen(MDBoxLayout):
                         result_bubbles.append((json.dumps(advice, indent=2, ensure_ascii=False), False))
                         result_bubbles.append(("=== FORMATTED ADVISORY ===", False))
                         result_bubbles.append((advice['formatted'], False))
+                        # Show LLM advice as a separate bubble for clarity
+                        if 'llm_advice' in advice and advice['llm_advice']:
+                            result_bubbles.append(("LLM Expert Advice:", False))
+                            result_bubbles.append((advice['llm_advice'], False))
                         self.state["context"]["last_advisory"] = advice
                         self.state["context"]["last_advisory_crop"] = crop
                         self.state["mode"] = "advisory_feedback"

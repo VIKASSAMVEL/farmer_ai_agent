@@ -11,7 +11,7 @@ The Farmer AI Agent is a comprehensive solution that combines local data, machin
 
 The project is built on a modular architecture, with distinct components for each key function:
 
-*   **🧑‍🌾 Personalized Crop Advisory:** Get tailored advice for specific crops (e.g., Tomato, Rice, Wheat). The agent considers soil type and provides recommendations on best practices, climate-smart tips, and care instructions using local data.
+*   **Personalized Crop Advisory:** Get tailored advice for specific crops (e.g., Tomato, Rice, Wheat). The agent considers soil type and provides recommendations on best practices, climate-smart tips, and care instructions using local data.
 
 *   **🌿 Plant Disease Identification (CV):** Upload an image of a plant leaf, and the agent will use a computer vision model (via Roboflow) to identify potential diseases. It then leverages a local LLM to provide practical solutions and medicine recommendations.
 

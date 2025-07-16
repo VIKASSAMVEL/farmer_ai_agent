@@ -186,12 +186,12 @@ class ChatScreen(BoxLayout):
         # Feature buttons
         feature_layout = BoxLayout(size_hint=(1, 0.18), spacing=get_scaled(10), padding=[get_scaled(16), get_scaled(8), get_scaled(16), get_scaled(8)])
         self.feature_buttons = {
-            "Input": Button(text="🎤 Input", on_press=self.input_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Input": Button(text="Input", on_press=self.input_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
             "Advisory": Button(text="🌱 Advisory", on_press=self.advisory_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
             "Calendar": Button(text="📅 Calendar", on_press=self.calendar_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
             "FAQ": Button(text="❓ FAQ", on_press=self.faq_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
             "Weather": Button(text="☀️ Weather", on_press=self.weather_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
-            "Translate": Button(text="🌐 Translate", on_press=self.translate_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
+            "Translate": Button(text="Translate", on_press=self.translate_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16)),
             "Analytics": Button(text="📊 Analytics", on_press=self.analytics_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
             "TTS Voices": Button(text="🔊 TTS Voices", on_press=self.tts_voices_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),
             "Clear History": Button(text="🧹 Clear History", on_press=self.clear_history_action, background_color=(0.95, 1, 0.95, 1), color=(0.2, 0.6, 0.2, 1), font_size=get_scaled(16), font_name='C:\\Windows\\Fonts\\seguiemj.ttf'),

@@ -1,6 +1,8 @@
 # Offline Personalized Crop Advisory
+
 import json
 import os
+from farmer_agent.utils.llm_utils import call_llm
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), '..', 'config')
@@ -48,6 +50,20 @@ def get_crop_advice(crop_name, soil_type=None):
         "care_instructions": crop_info.get('care_instructions', []),
     }
 
+    # Compose LLM prompt
+    llm_prompt = (
+        f"You are an agricultural expert. Given the following information, provide additional expert advice for the farmer.\n"
+        f"Crop: {advice['crop']}\n"
+        f"Recommended Soil: {advice['recommended_soil']}\n"
+        f"Current Soil: {advice['current_soil']}\n"
+        f"Soil Notes: {advice['soil_notes']}\n"
+        f"Market Price: {advice['market_price']}\n"
+        f"Climate-Smart Tips: {', '.join(advice['climate_smart_tips']) if advice['climate_smart_tips'] else 'N/A'}\n"
+        f"Care Instructions: {', '.join(advice['care_instructions']) if advice['care_instructions'] else 'N/A'}\n"
+        "Give actionable, concise advice in 100 words or less."
+    )
+    advice['llm_advice'] = call_llm(llm_prompt)
+
     # Also return a formatted string for CLI/print
     lines = [
         f"Crop: {advice['crop']}",
@@ -64,6 +80,8 @@ def get_crop_advice(crop_name, soil_type=None):
         lines.append("Care Instructions:")
         for inst in advice['care_instructions']:
             lines.append(f"- {inst}")
+    lines.append("\nLLM Expert Advice:")
+    lines.append(advice['llm_advice'])
     advice['formatted'] = "\n".join(lines)
     return advice
 

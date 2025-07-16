@@ -84,11 +84,33 @@
           "feedback": "positive"
         },
         "timestamp": "2025-07-15T23:25:04.146703"
+      },
+      {
+        "query": "Tomato, None",
+        "advisory": {
+          "crop": "Tomato",
+          "recommended_soil": "Sandy Loam",
+          "current_soil": "N/A",
+          "soil_notes": "N/A",
+          "market_price": 1.5,
+          "climate_smart_tips": [
+            "Use drip irrigation to save water.",
+            "Apply organic mulch for moisture retention."
+          ],
+          "care_instructions": [
+            "Check for leaf spots weekly.",
+            "Fertilize with compost every 2 weeks."
+          ],
+          "llm_advice": "Farmer's Expert Advice on Tomato Cultivation: Optimizing your tomatoes starts by amending sandy loam to ensure it retains moisture and nutrients adequately since these are the challenges of such soil type for tomatoes. Mix in generous amounts of well-rotted manure or compost, which will act as both conditioners and slow-release fertilizers while also enhancing water retention capacity of your sandy loam over time with consistent organic mulching around the plants to reduce evaporation losses. Implement a drip irrigation system tailored for tomatoes' needs, delivering even moisture directly to roots and minimizing waste—monitor soil moisture closely as you adjust water delivery rates accordingly throughout your growing season in alignment with market price fluctuations. Regularly inspect leaves weekly; if leaf spots appear (potential early signs of fungal diseases like Septoria or Early Blight), remove affected areas to prevent spread and consider organic fungicides as a last resort while fostering good air circulation around plants for disease reduction. Lastly, remember that tomatoes thrive best in slightly acidic soil with pH between 6.0-6.8; test your amended sandy loam regularly and adjust accordingly using lime if necessary to maintain this range without harming the crop quality or flavor essential at market price point of $1.5 per unit—a fair sell for high-quality organic tomatoes cultivated with climate smarts in mind!",
+          "formatted": "Crop: Tomato\nRecommended Soil: Sandy Loam\nCurrent Soil: N/A\nSoil Notes: N/A\nMarket Price: 1.5\nClimate-Smart Tips:\n- Use drip irrigation to save water.\n- Apply organic mulch for moisture retention.\nCare Instructions:\n- Check for leaf spots weekly.\n- Fertilize with compost every 2 weeks.\n\nLLM Expert Advice:\nFarmer's Expert Advice on Tomato Cultivation: Optimizing your tomatoes starts by amending sandy loam to ensure it retains moisture and nutrients adequately since these are the challenges of such soil type for tomatoes. Mix in generous amounts of well-rotted manure or compost, which will act as both conditioners and slow-release fertilizers while also enhancing water retention capacity of your sandy loam over time with consistent organic mulching around the plants to reduce evaporation losses. Implement a drip irrigation system tailored for tomatoes' needs, delivering even moisture directly to roots and minimizing waste—monitor soil moisture closely as you adjust water delivery rates accordingly throughout your growing season in alignment with market price fluctuations. Regularly inspect leaves weekly; if leaf spots appear (potential early signs of fungal diseases like Septoria or Early Blight), remove affected areas to prevent spread and consider organic fungicides as a last resort while fostering good air circulation around plants for disease reduction. Lastly, remember that tomatoes thrive best in slightly acidic soil with pH between 6.0-6.8; test your amended sandy loam regularly and adjust accordingly using lime if necessary to maintain this range without harming the crop quality or flavor essential at market price point of $1.5 per unit—a fair sell for high-quality organic tomatoes cultivated with climate smarts in mind!",
+          "feedback": "positive"
+        },
+        "timestamp": "2025-07-16T00:28:02.801099"
       }
     ],
     "meta": {
       "created_at": "2025-07-15T11:28:21.399269",
-      "last_active": "2025-07-16T00:17:23.645615"
+      "last_active": "2025-07-16T00:28:02.801099"
     }
   }
 }
