@@ -234,7 +234,7 @@ class ChatScreen(MDBoxLayout):
             s = re.sub(r'\\(?!n|t|r)', '', s)
             return s
 
-        def show_spinner():
+        def show_spinner(dt=None):
             nonlocal spinner_bubble
             spinner_bubble = ChatBubble("Processing...", is_user=False)
             self.chat_history.add_widget(spinner_bubble)
@@ -277,9 +277,9 @@ class ChatScreen(MDBoxLayout):
             return translated
 
         try:
-            # If translation may take time, show spinner
-            translation_thread = threading.Thread(target=show_spinner)
-            translation_thread.start()
+            # If translation may take time, show spinner (on main thread)
+            from kivy.clock import Clock
+            Clock.schedule_once(show_spinner, 0)
             # Do translation (with timeout)
             translated_text = do_translation()
             # Remove spinner if shown
@@ -329,7 +329,7 @@ class ChatScreen(MDBoxLayout):
         self.bind(pos=self._update_bg, size=self._update_bg)
 
         # Mode bar
-        mode_bar = MDBoxLayout(size_hint=(1, 0.09), padding=[16, 8, 16, 8], spacing=16)
+        self.mode_bar = MDBoxLayout(size_hint=(1, 0.09), padding=[16, 8, 16, 8], spacing=16)
         self.mode_btn = MDRaisedButton(
             text="Select Mode",
             size_hint=(None, 1),
@@ -346,12 +346,16 @@ class ChatScreen(MDBoxLayout):
                 {"text": "FAQ", "on_release": lambda: self.faq_action(None)},
                 {"text": "Weather", "on_release": lambda: self.weather_action(None)},
                 {"text": "Analytics", "on_release": lambda: self.analytics_action(None)},
+                {"text": "Chat", "on_release": lambda: self.chat_action(None)},
                 {"text": "Clear History", "on_release": lambda: self.clear_history_action(None)},
                 {"text": "Exit", "on_release": lambda: self.exit_action(None)},
             ]
         )
+    def chat_action(self, instance):
+        self.state["mode"] = "chat"
+        self.add_bubble("Chat mode enabled. You can now chat directly with the AI. Type your message:", is_user=False)
         self.mode_btn.bind(on_release=lambda _: self.mode_menu.open())
-        mode_bar.add_widget(self.mode_btn)
+        self.mode_bar.add_widget(self.mode_btn)
         self.language_btn = MDRaisedButton(
             text="🌐 Language",
             size_hint=(None, 1),
@@ -385,8 +389,8 @@ class ChatScreen(MDBoxLayout):
             } for name, code in self.supported_languages]
         )
         self.language_btn.bind(on_release=lambda _: self.language_dropdown.open())
-        mode_bar.add_widget(self.language_btn)
-        self.add_widget(mode_bar)
+        self.mode_bar.add_widget(self.language_btn)
+        self.add_widget(self.mode_bar)
 
         # Chat history area
         chat_area = MDBoxLayout(size_hint=(1, 0.62), padding=[16, 8, 16, 8])
@@ -763,17 +767,41 @@ class ChatScreen(MDBoxLayout):
 
     def start_mic_recording(self, instance):
         try:
+            import threading
+            import time
             if not recognize_speech:
                 self.add_bubble("Voice input not available.", is_user=False)
                 return
+            if not hasattr(self, '_mic_stop_event'):
+                self._mic_stop_event = threading.Event()
+                self._mic_thread = None
             if not self.is_recording:
                 self.is_recording = True
+                self._mic_stop_event.clear()
                 if self.mic_btn:
                     self.mic_btn.text = "⏹ Stop Mic"
                 self.add_bubble("Recording... Please speak into the mic. Click again to stop.", is_user=False)
                 def run_stt():
                     try:
-                        text = recognize_speech(source='mic', lang='en') # type: ignore
+                        # Start recording, but wait for stop event
+                        text_result = [""]  # Initialize as list of str for type compatibility
+                        def record():
+                            # recognize_speech should block until stopped, but if not, we simulate with event
+                            lang_code = self.state.get('language', 'en') or 'en'
+                            # Whisper expects ISO codes, not 'auto'
+                            if lang_code == 'auto':
+                                lang_code = 'en'
+                            try:
+                                text_result[0] = recognize_speech(source='mic', lang=lang_code) # type: ignore
+                            except Exception as e:
+                                text_result[0] = f"[Error] {str(e)}"
+                        rec_thread = threading.Thread(target=record)
+                        rec_thread.start()
+                        # Wait for user to click stop
+                        self._mic_stop_event.wait()
+                        # If recognize_speech is blocking, it should stop on its own; if not, we just use the result
+                        rec_thread.join(timeout=2)
+                        text = text_result[0]
                         def set_text(dt):
                             if text and not str(text).startswith('[Error') and text.strip() and text.strip() != '[Mic Recording Started]':
                                 self.add_bubble(f"Mic Input: {text}", is_user=True)
@@ -792,9 +820,13 @@ class ChatScreen(MDBoxLayout):
                             if self.mic_btn:
                                 self.mic_btn.text = "🎤 Mic"
                         Clock.schedule_once(set_error, 0)
-                threading.Thread(target=run_stt, daemon=True).start()
+                self._mic_thread = threading.Thread(target=run_stt, daemon=True)
+                self._mic_thread.start()
             else:
+                # User clicked again to stop
                 self.is_recording = False
+                if hasattr(self, '_mic_stop_event'):
+                    self._mic_stop_event.set()
                 if self.mic_btn:
                     self.mic_btn.text = "🎤 Mic"
         except Exception as e:
@@ -1074,6 +1106,22 @@ class ChatScreen(MDBoxLayout):
                         Clock.schedule_once(lambda dt: self._update_ui(spinner, result_bubbles), 0)
                 threading.Thread(target=run_audio, daemon=True).start()
                 self.state["mode"] = None
+            elif self.state.get("mode") == "chat":
+                spinner = MDSpinner(size_hint=(None, None), size=(50, 50), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+                self.chat_history.add_widget(spinner)
+                self.text_input.disabled = True
+                def run_llm_chat():
+                    result_bubbles = []
+                    try:
+                        # Use LLM utility to get a response
+                        from farmer_agent.utils.llm_utils import call_llm
+                        response = call_llm(user_text)
+                        result_bubbles.append((response, False))
+                    except Exception as e:
+                        result_bubbles.append((f"Chat error: {str(e)}", False))
+                    finally:
+                        Clock.schedule_once(lambda dt: self._update_ui(spinner, result_bubbles), 0)
+                threading.Thread(target=run_llm_chat, daemon=True).start()
             else:
                 self.add_bubble("Sorry, I didn't understand. Try using a feature button.", is_user=False)
         except Exception as e:
