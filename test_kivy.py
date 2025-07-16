@@ -336,7 +336,7 @@ class ChatScreen(MDBoxLayout):
             width=140,
             md_bg_color=(0.13, 0.16, 0.22, 1),
             text_color=(0.8, 0.9, 1, 1),
-            font_size=24  # Increased from 18
+            font_size=24
         )
         self.mode_menu = MDDropdownMenu(
             caller=self.mode_btn,
@@ -351,9 +351,6 @@ class ChatScreen(MDBoxLayout):
                 {"text": "Exit", "on_release": lambda: self.exit_action(None)},
             ]
         )
-    def chat_action(self, instance):
-        self.state["mode"] = "chat"
-        self.add_bubble("Chat mode enabled. You can now chat directly with the AI. Type your message:", is_user=False)
         self.mode_btn.bind(on_release=lambda _: self.mode_menu.open())
         self.mode_bar.add_widget(self.mode_btn)
         self.language_btn = MDRaisedButton(
@@ -362,22 +359,13 @@ class ChatScreen(MDBoxLayout):
             width=140,
             md_bg_color=(0.13, 0.16, 0.22, 1),
             text_color=(0.8, 0.9, 1, 1),
-            font_size=24  # Increased from 18
+            font_size=24
         )
-        # Expanded language dropdown with more languages
         self.supported_languages = [
             ("English", "en"),
             ("தமிழ்", "ta"),
             ("हिन्दी", "hi"),
-            ("తెలుగు", "te"),
-            ("ಕನ್ನಡ", "kn"),
-            ("മലയാളം", "ml"),
-            ("मराठी", "mr"),
-            ("ગુજરાતી", "gu"),
-            ("ਪੰਜਾਬੀ", "pa"),
-            ("বাংলা", "bn"),
         ]
-        # Use a font that supports all scripts for language names
         font_path = get_font_path('NotoSans-Regular')
         self.language_dropdown = MDDropdownMenu(
             caller=self.language_btn,
@@ -419,7 +407,7 @@ class ChatScreen(MDBoxLayout):
             width=140,
             md_bg_color=(0.13, 0.16, 0.22, 1),
             text_color=(0.8, 0.9, 1, 1),
-            font_size=24  # Increased from 18
+            font_size=24
         )
         self.input_menu = MDDropdownMenu(
             caller=self.input_btn,
@@ -440,7 +428,7 @@ class ChatScreen(MDBoxLayout):
         footer = MDBoxLayout(size_hint=(1, 0.05), padding=[0, 4, 0, 4])
         footer_label = MDLabel(
             text='© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design',
-            font_size=20,  # Increased from 14
+            font_size=20,
             color=(0.8, 0.9, 1, 1)
         )
         footer.add_widget(footer_label)
@@ -468,6 +456,9 @@ class ChatScreen(MDBoxLayout):
         except Exception as e:
             logging.error(f"UserManager init error: {str(e)}")
             self.add_bubble(f"User profile error: {str(e)}", is_user=False)
+    def chat_action(self, instance):
+        self.state["mode"] = "chat"
+        self.add_bubble("Chat mode enabled. You can now chat directly with the AI. Type your message:", is_user=False)
 
     def _update_bg(self, *args):
         self.canvas.before.clear()
