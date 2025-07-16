@@ -22,6 +22,7 @@ from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.popup import Popup
 from kivy.animation import Animation
 from kivy.uix.behaviors import ButtonBehavior
+from farmer_agent.utils.language_utils import detect_language, llm_translate
 
 # Configure logging
 logging.basicConfig(
@@ -208,6 +209,8 @@ class ChatScreen(MDBoxLayout):
         self.calendar = CropCalendar() if CropCalendar else None
         self.reminders = Reminders() if Reminders else None
         self.voice_output_enabled = False
+        self.detect_language = detect_language
+        self.llm_translate = llm_translate
         self.bind(pos=self._update_bg, size=self._update_bg)
 
         # Mode bar
@@ -242,12 +245,22 @@ class ChatScreen(MDBoxLayout):
             text_color=(0.8, 0.9, 1, 1),
             font_size=24  # Increased from 18
         )
+        # Expanded language dropdown with more languages
+        self.supported_languages = [
+            ("English", "en"),
+            ("தமிழ்", "ta"),
+            ("हिन्दी", "hi"),
+            ("తెలుగు", "te"),
+            ("ಕನ್ನಡ", "kn"),
+            ("മലയാളം", "ml"),
+            ("मराठी", "mr"),
+            ("ગુજરાતી", "gu"),
+            ("ਪੰਜਾਬੀ", "pa"),
+            ("বাংলা", "bn"),
+        ]
         self.language_dropdown = MDDropdownMenu(
             caller=self.language_btn,
-            items=[
-                {"text": "English", "on_release": lambda: self.set_language('en')},
-                {"text": "தமிழ்", "on_release": lambda: self.set_language('ta')},
-            ]
+            items=[{"text": name, "on_release": lambda code=code: self.set_language(code)} for name, code in self.supported_languages]
         )
         self.language_btn.bind(on_release=lambda _: self.language_dropdown.open())
         mode_bar.add_widget(self.language_btn)
@@ -336,67 +349,6 @@ class ChatScreen(MDBoxLayout):
             Color(0, 0, 0, 1)  # Black background
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
 
-    def add_bubble(self, text, is_user=False):
-        import re
-        def format_structured(obj, indent=0):
-            spacer = '  ' * indent
-            if isinstance(obj, dict):
-                lines = []
-                for k, v in obj.items():
-                    if isinstance(v, (dict, list)):
-                        lines.append(f"{spacer}{k}:")
-                        lines.append(format_structured(v, indent + 1))
-                    else:
-                        lines.append(f"{spacer}{k}: {v}")
-                return '\n'.join(lines)
-            elif isinstance(obj, list):
-                return '\n'.join([f"{spacer}• {format_structured(item, indent + 1) if isinstance(item, (dict, list)) else item}" for item in obj])
-            else:
-                return str(obj)
-
-        def remove_escape_sequences(s):
-            if not isinstance(s, str):
-                return s
-            # Remove escape sequences like \n, \t, \r, etc. but keep actual newlines
-            s = s.replace('\\n', '\n').replace('\\t', '    ').replace('\\r', '')
-            # Remove any remaining backslash-escaped characters except for \\n+            s = re.sub(r'\\(?!n|t|r)', '', s)
-            return s
-
-        try:
-            formatted_text = text
-            if not is_user:
-                try:
-                    # Try to parse JSON and format it nicely
-                    if isinstance(text, str):
-                        stripped = text.strip()
-                        if (stripped.startswith('{') and stripped.endswith('}')) or (stripped.startswith('[') and stripped.endswith(']')):
-                            obj = json.loads(stripped)
-                            formatted_text = format_structured(obj)
-                except Exception:
-                    pass
-            # Remove escape characters from the final text
-            formatted_text = remove_escape_sequences(formatted_text)
-            bubble = ChatBubble(formatted_text, is_user=is_user)
-            self.chat_history.add_widget(bubble)
-            self.chat_history.height = self.chat_history.minimum_height
-            self.scroll.scroll_to(bubble, padding=10, animate=True)
-            prefix = 'USER' if is_user else 'AGENT'
-            logging.info(f"[{prefix}] {text}")
-            if text == 'User history cleared.':
-                try:
-                    with open('kivy_chat_log.txt', 'r', encoding='utf-8') as logf:
-                        lines = logf.readlines()
-                        if lines and 'User history cleared.' in lines[-1]:
-                            last_time = lines[-1].split(' ')[0]
-                            last_dt = datetime.strptime(last_time, '%Y-%m-%d')
-                            if (datetime.now() - last_dt).total_seconds() < 2:
-                                return
-                except Exception:
-                    pass
-        except Exception as e:
-            logging.error(f"add_bubble error: {str(e)}")
-            self.add_bubble(f"Error displaying message: {str(e)}", is_user=False)
-
     def set_input_text(self):
         self.input_menu.dismiss()
         self.text_input.disabled = False
@@ -468,7 +420,13 @@ class ChatScreen(MDBoxLayout):
         self.translate_ui(lang_code)
         self.add_bubble(f"Language set to: {lang_code}", is_user=False)
 
+    def auto_detect_and_set_language(self, text):
+        detected = self.detect_language(text)
+        if detected != self.state['language']:
+            self.set_language(detected)
+
     def translate_ui(self, lang_code):
+        # Centralized translation dictionary for UI strings
         translations = {
             'en': {
                 'Farmer AI Agent': 'Farmer AI Agent',
@@ -486,13 +444,46 @@ class ChatScreen(MDBoxLayout):
                 '🌐 Language': 'மொழி',
                 '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 பார்மர் எஐ ஏஜெண்ட் | ஓப்பன் சோர்ஸ் மூலம் இயக்கப்படுகிறது | அணுகக்கூடிய வடிவமைப்பு',
             },
+            'hi': {
+                'Farmer AI Agent': 'किसान एआई एजेंट',
+                'Select Mode': 'मोड चुनें',
+                'Input Type': 'इनपुट प्रकार',
+                'Send': 'भेजें',
+                '🌐 Language': 'भाषा',
+                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 किसान एआई एजेंट | ओपन सोर्स द्वारा संचालित | सुलभ डिज़ाइन',
+            },
+            'te': {
+                'Farmer AI Agent': 'రైతు ఏఐ ఏజెంట్',
+                'Select Mode': 'మోడ్ ఎంచుకోండి',
+                'Input Type': 'ఇన్పుట్ రకం',
+                'Send': 'పంపు',
+                '🌐 Language': 'భాష',
+                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 రైతు ఏఐ ఏజెంట్ | ఓపెన్ సోర్స్ ఆధారితం | అందుబాటులో ఉన్న డిజైన్',
+            },
+            'kn': {
+                'Farmer AI Agent': 'ರೈತ ಎಐ ಏಜೆಂಟ್',
+                'Select Mode': 'ಮೋಡ್ ಆಯ್ಕೆಮಾಡಿ',
+                'Input Type': 'ಇನ್ಪುಟ್ ಪ್ರಕಾರ',
+                'Send': 'ಕಳುಹಿಸಿ',
+                '🌐 Language': 'ಭಾಷೆ',
+                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 ರೈತ ಎಐ ಏಜೆಂಟ್ | ಓಪನ್ ಸೋರ್ಸ್ ಮೂಲಕ ಚಾಲಿತ | ಸುಲಭವಾದ ವಿನ್ಯಾಸ',
+            },
+            'ml': {
+                'Farmer AI Agent': 'കർഷകൻ എഐ ഏജന്റ്',
+                'Select Mode': 'മോഡ് തിരഞ്ഞെടുക്കുക',
+                'Input Type': 'ഇൻപുട്ട് തരം',
+                'Send': 'അയയ്ക്കുക',
+                '🌐 Language': 'ഭാഷ',
+                '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design': '© 2025 കർഷകൻ എഐ ഏജന്റ് | ഓപ്പൺ സോഴ്സ് ഉപയോഗിച്ച് പ്രവർത്തിക്കുന്നു | ആക്സസിബിൾ ഡിസൈൻ',
+            },
+            # Add more translations as needed
         }
         lang_map = translations.get(lang_code, translations['en'])
-        self.mode_btn.text = lang_map['Select Mode']
-        self.input_btn.text = lang_map['Input Type']
-        self.input_bar.children[0].text = lang_map['Send']
-        self.language_btn.text = lang_map['🌐 Language']
-        self.children[0].children[0].text = lang_map['© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design']
+        self.mode_btn.text = lang_map.get('Select Mode', 'Select Mode')
+        self.input_btn.text = lang_map.get('Input Type', 'Input Type')
+        self.input_bar.children[0].text = lang_map.get('Send', 'Send')
+        self.language_btn.text = lang_map.get('🌐 Language', '🌐 Language')
+        self.children[0].children[0].text = lang_map.get('© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design', '© 2025 Farmer AI Agent | Powered by Open Source | Accessible Design')
 
     def advisory_action(self, instance):
         if not get_crop_advice:
@@ -728,6 +719,8 @@ class ChatScreen(MDBoxLayout):
         user_text = self.text_input.text.strip()
         if not user_text:
             return
+        # Auto-detect user language and set UI
+        self.auto_detect_and_set_language(user_text)
         self.add_bubble(user_text, is_user=True)
         try:
             if self.state.get("mode") == "advisory_crop":
