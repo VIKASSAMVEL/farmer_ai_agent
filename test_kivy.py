@@ -333,7 +333,7 @@ class ChatScreen(MDBoxLayout):
             text="Select Mode",
             size_hint=(None, 1),
             width=140,
-            md_bg_color=(0.13, 0.16, 0.22, 1),
+            md_bg_color=(0.13, 0.16, 0.22, 1),v  tr 4
             text_color=(0.8, 0.9, 1, 1),
             font_size=24
         )
